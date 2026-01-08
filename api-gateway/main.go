@@ -10,6 +10,7 @@ import (
 	authenticationpb "mrnet/gen/go/proto/authentication"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Gateway struct {
@@ -29,9 +30,9 @@ type SignupResponse struct {
 }
 
 func main() {
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		"localhost:50051",
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		log.Fatal(err)
