@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package mrnet.v1;
+option go_package = "/authentication;authenticationpb";
+
+service LoginService {
+    rpc LoginWithCredentials (UserLoginDetails) returns (LoginResponse);
+    rpc LoginWithToken (JWTToken) returns (LoginResponse);
+}
+
+service SignupService {
+    rpc Signup (UserSignupDetails) returns (LoginResponse);
+}
+
+service ModificationService {
+    rpc PasswdChange (PasswdResetRequest) returns (UserLoginDetails);
+    rpc UserIdChange (UserLoginDetails) returns (UserLoginDetails);
+}
+
+message UserLoginDetails {
+    string emailOrId = 1;
+    string passwdHash = 2;
+}
+
+message LoginResponse {
+    bool loginSuccess = 1;
+    string jwtToken = 2;
+    string error = 3;
+}
+
+message JWTToken {
+    string jwtToken = 1;
+}
+
+message UserSignupDetails {
+    string email = 1;
+    string id = 2;
+    string passwdHash = 3;
+}
+
+message PasswdResetRequest {
+    string email = 1;
+    string secretCode = 2;
+}
