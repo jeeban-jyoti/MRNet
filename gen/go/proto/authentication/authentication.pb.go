@@ -320,10 +320,10 @@ const file_authentication_proto_rawDesc = "" +
 	"\x14LoginWithCredentials\x12\x1a.mrnet.v1.UserLoginDetails\x1a\x17.mrnet.v1.LoginResponse\x12=\n" +
 	"\x0eLoginWithToken\x12\x12.mrnet.v1.JWTToken\x1a\x17.mrnet.v1.LoginResponse2O\n" +
 	"\rSignupService\x12>\n" +
-	"\x06Signup\x12\x1b.mrnet.v1.UserSignupDetails\x1a\x17.mrnet.v1.LoginResponse2\xa7\x01\n" +
-	"\x13ModificationService\x12H\n" +
-	"\fPasswdChange\x12\x1c.mrnet.v1.PasswdResetRequest\x1a\x1a.mrnet.v1.UserLoginDetails\x12F\n" +
-	"\fUserIdChange\x12\x1a.mrnet.v1.UserLoginDetails\x1a\x1a.mrnet.v1.UserLoginDetailsB\"Z /authentication;authenticationpbb\x06proto3"
+	"\x06Signup\x12\x1b.mrnet.v1.UserSignupDetails\x1a\x17.mrnet.v1.LoginResponse2\xa1\x01\n" +
+	"\x13ModificationService\x12E\n" +
+	"\fPasswdChange\x12\x1c.mrnet.v1.PasswdResetRequest\x1a\x17.mrnet.v1.LoginResponse\x12C\n" +
+	"\fUserIdChange\x12\x1a.mrnet.v1.UserLoginDetails\x1a\x17.mrnet.v1.LoginResponseB\"Z /authentication;authenticationpbb\x06proto3"
 
 var (
 	file_authentication_proto_rawDescOnce sync.Once
@@ -354,8 +354,8 @@ var file_authentication_proto_depIdxs = []int32{
 	1, // 5: mrnet.v1.LoginService.LoginWithCredentials:output_type -> mrnet.v1.LoginResponse
 	1, // 6: mrnet.v1.LoginService.LoginWithToken:output_type -> mrnet.v1.LoginResponse
 	1, // 7: mrnet.v1.SignupService.Signup:output_type -> mrnet.v1.LoginResponse
-	0, // 8: mrnet.v1.ModificationService.PasswdChange:output_type -> mrnet.v1.UserLoginDetails
-	0, // 9: mrnet.v1.ModificationService.UserIdChange:output_type -> mrnet.v1.UserLoginDetails
+	1, // 8: mrnet.v1.ModificationService.PasswdChange:output_type -> mrnet.v1.LoginResponse
+	1, // 9: mrnet.v1.ModificationService.UserIdChange:output_type -> mrnet.v1.LoginResponse
 	5, // [5:10] is the sub-list for method output_type
 	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

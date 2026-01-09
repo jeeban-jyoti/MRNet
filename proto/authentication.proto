@@ -13,8 +13,8 @@ service SignupService {
 }
 
 service ModificationService {
-    rpc PasswdChange (PasswdResetRequest) returns (UserLoginDetails);
-    rpc UserIdChange (UserLoginDetails) returns (UserLoginDetails);
+    rpc PasswdChange (PasswdResetRequest) returns (LoginResponse);
+    rpc UserIdChange (UserLoginDetails) returns (LoginResponse);
 }
 
 message UserLoginDetails {

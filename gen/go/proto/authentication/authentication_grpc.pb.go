@@ -269,8 +269,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ModificationServiceClient interface {
-	PasswdChange(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*UserLoginDetails, error)
-	UserIdChange(ctx context.Context, in *UserLoginDetails, opts ...grpc.CallOption) (*UserLoginDetails, error)
+	PasswdChange(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	UserIdChange(ctx context.Context, in *UserLoginDetails, opts ...grpc.CallOption) (*LoginResponse, error)
 }
 
 type modificationServiceClient struct {
@@ -281,9 +281,9 @@ func NewModificationServiceClient(cc grpc.ClientConnInterface) ModificationServi
 	return &modificationServiceClient{cc}
 }
 
-func (c *modificationServiceClient) PasswdChange(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*UserLoginDetails, error) {
+func (c *modificationServiceClient) PasswdChange(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserLoginDetails)
+	out := new(LoginResponse)
 	err := c.cc.Invoke(ctx, ModificationService_PasswdChange_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -291,9 +291,9 @@ func (c *modificationServiceClient) PasswdChange(ctx context.Context, in *Passwd
 	return out, nil
 }
 
-func (c *modificationServiceClient) UserIdChange(ctx context.Context, in *UserLoginDetails, opts ...grpc.CallOption) (*UserLoginDetails, error) {
+func (c *modificationServiceClient) UserIdChange(ctx context.Context, in *UserLoginDetails, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UserLoginDetails)
+	out := new(LoginResponse)
 	err := c.cc.Invoke(ctx, ModificationService_UserIdChange_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -305,8 +305,8 @@ func (c *modificationServiceClient) UserIdChange(ctx context.Context, in *UserLo
 // All implementations must embed UnimplementedModificationServiceServer
 // for forward compatibility.
 type ModificationServiceServer interface {
-	PasswdChange(context.Context, *PasswdResetRequest) (*UserLoginDetails, error)
-	UserIdChange(context.Context, *UserLoginDetails) (*UserLoginDetails, error)
+	PasswdChange(context.Context, *PasswdResetRequest) (*LoginResponse, error)
+	UserIdChange(context.Context, *UserLoginDetails) (*LoginResponse, error)
 	mustEmbedUnimplementedModificationServiceServer()
 }
 
@@ -317,10 +317,10 @@ type ModificationServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedModificationServiceServer struct{}
 
-func (UnimplementedModificationServiceServer) PasswdChange(context.Context, *PasswdResetRequest) (*UserLoginDetails, error) {
+func (UnimplementedModificationServiceServer) PasswdChange(context.Context, *PasswdResetRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PasswdChange not implemented")
 }
-func (UnimplementedModificationServiceServer) UserIdChange(context.Context, *UserLoginDetails) (*UserLoginDetails, error) {
+func (UnimplementedModificationServiceServer) UserIdChange(context.Context, *UserLoginDetails) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UserIdChange not implemented")
 }
 func (UnimplementedModificationServiceServer) mustEmbedUnimplementedModificationServiceServer() {}
