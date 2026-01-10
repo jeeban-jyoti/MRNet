@@ -13,8 +13,8 @@ service SignupService {
 }
 
 service ModificationService {
-    rpc PasswdChange (PasswdResetRequest) returns (LoginResponse);
-    rpc UserIdChange (UserLoginDetails) returns (LoginResponse);
+    rpc ChangePasswd (PasswdResetRequest) returns (ModificationSuccess);
+    rpc ChangeUserId (UserIdPasswd) returns (ModificationSuccess);
 }
 
 message UserLoginDetails {
@@ -40,5 +40,15 @@ message UserSignupDetails {
 
 message PasswdResetRequest {
     string email = 1;
-    string secretCode = 2;
+    string secretHash = 2;
+}
+
+message UserIdPasswd {
+    string email = 1;
+    string passwdHash = 2;
+}
+
+message ModificationSuccess {
+    bool success = 1;
+    string error = 2;
 }

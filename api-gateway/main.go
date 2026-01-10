@@ -36,7 +36,7 @@ type TokenLoginRequest struct {
 }
 
 type CredentialsLoginRequest struct {
-	Id       string `json:"Id"`
+	Id       string `json:"id"`
 	Password string `json:"password"`
 }
 
@@ -48,6 +48,11 @@ type PasswdChangeRequest struct {
 type UserIDChangeRequest struct {
 	Email      string `json:"email"`
 	PasswdHash string `json:"passwdHash"`
+}
+
+type ModificationResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
 }
 
 func main() {
@@ -67,10 +72,10 @@ func main() {
 	}
 
 	http.HandleFunc("/signup", gateway.signupHandler)
-	http.HandleFunc("/cred-login", gateway.signupHandler)
-	http.HandleFunc("/token-login", gateway.signupHandler)
-	http.HandleFunc("/userid-change", gateway.signupHandler)
-	http.HandleFunc("/passwd-change", gateway.signupHandler)
+	http.HandleFunc("/cred-login", gateway.credLoginHandler)
+	http.HandleFunc("/token-login", gateway.tokenLoginHandler)
+	http.HandleFunc("/userid-change", gateway.changeUseridHandler)
+	http.HandleFunc("/passwd-change", gateway.changePasswdHandler)
 
 	log.Println("API Gateway running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -111,7 +116,7 @@ func (g *Gateway) signupHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(out)
 }
 
-func (g *Gateway) CredentialsLogin(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) credLoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -145,14 +150,103 @@ func (g *Gateway) CredentialsLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(out)
 }
 
-func (g *Gateway) TokenLogin(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) tokenLoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
+	var req TokenLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.loginClient.LoginWithToken(ctx, &authenticationpb.JWTToken{
+		JwtToken: req.JWTToken,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := LoggedInResponse{
+		Success: resp.LoginSuccess,
+		Token:   resp.JwtToken,
+		Error:   resp.Error,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
 }
 
-func (g *Gateway) UsesrIDChange(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) changeUseridHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
+	var req UserIDChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.modificationClient.ChangeUserId(ctx,
+		&authenticationpb.UserIdPasswd{
+			Email:      req.Email,
+			PasswdHash: req.PasswdHash,
+		})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := ModificationResponse{
+		Success: resp.Success,
+		Error:   resp.Error,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
 }
 
-func (g *Gateway) PasswdChange(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) changePasswdHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
+	var req PasswdChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.modificationClient.ChangePasswd(ctx,
+		&authenticationpb.PasswdResetRequest{
+			Email:      req.Email,
+			SecretHash: req.SecretHash,
+		})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := LoggedInResponse{
+		Success: resp.Success,
+		Error:   resp.Error,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
 }
