@@ -13,8 +13,8 @@ service SignupService {
 }
 
 service ModificationService {
-    rpc RequestChangePassword (RequestChangePasswordRequest) returns (RequestChangePasswordResponse);
-    rpc ChangePassword (PasswdResetRequest) returns (ModificationResponse);
+    rpc RequestChangePassword (RequestChangePasswordRequest) returns (ModificationResponse);
+    rpc ChangePassword (PasswordResetRequest) returns (ModificationResponse);
     rpc ChangeUserId (UserIdResetRequest) returns (ModificationResponse);
 }
 
@@ -43,11 +43,7 @@ message RequestChangePasswordRequest {
     string email = 1;
 }
 
-message RequestChangePasswordResponse {
-    bool secretSent = 1;
-}
-
-message PasswdResetRequest {
+message PasswordResetRequest {
     string email = 1;
     string secretHash = 2;
     string newPasswordHash = 3;

@@ -2,8 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
+	"math/big"
 	"net"
 	"time"
 
@@ -52,6 +57,71 @@ func ValidateJWT(tokenString string) (string, error) {
 	}
 
 	return userID, nil
+}
+
+func Generate6DigitOTP() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", n.Int64()), nil
+}
+
+// TODO
+func sendOTPMail(email string, otp string) bool {
+	return true
+}
+
+func HashOTP(otp string) string {
+	hash := sha256.Sum256([]byte(otp))
+	return hex.EncodeToString(hash[:])
+}
+
+func SaveOTP(identifier string) error {
+	otp, err := Generate6DigitOTP()
+	if err != nil {
+		return err
+	}
+
+	key := "otp:" + identifier
+	hashedOTP := HashOTP(otp)
+
+	// Store OTP with 5-minute TTL
+	cacheErr := cache.RDB.Set(
+		cache.Ctx,
+		key,
+		hashedOTP,
+		5*time.Minute,
+	).Err()
+
+	if cacheErr != nil {
+		return cacheErr
+	}
+
+	if !sendOTPMail(identifier, otp) {
+		return errors.New("Failed to send mail")
+	}
+
+	return nil
+}
+
+func VerifyOTP(identifier string, inputOTP string) (bool, error) {
+	key := "otp:" + identifier
+
+	storedHash, err := cache.RDB.Get(cache.Ctx, key).Result()
+	if err != nil {
+		// key missing or expired
+		return false, nil
+	}
+
+	if HashOTP(inputOTP) != storedHash {
+		return false, nil
+	}
+
+	// OTP is valid → delete it (one-time use)
+	cache.RDB.Del(cache.Ctx, key)
+
+	return true, nil
 }
 
 type SignupServer struct {
@@ -191,9 +261,35 @@ type ModificationServer struct {
 	authenticationpb.UnimplementedModificationServiceServer
 }
 
-func (m *ModificationServer) ChangePasswd(
+func (m *ModificationServer) RequestChangePassword(
 	ctx context.Context,
-	req *authenticationpb.PasswdResetRequest,
+	req *authenticationpb.RequestChangePasswordRequest,
+) (*authenticationpb.ModificationResponse, error) {
+
+	log.Println("Password change:", req.Email)
+
+	if req.Email == "" {
+		return &authenticationpb.ModificationResponse{
+			Success: false,
+			Error:   "Empty email field",
+		}, nil
+	}
+
+	if SaveOTP(req.Email) != nil {
+		return &authenticationpb.ModificationResponse{
+			Success: false,
+			Error:   "OTP system failed",
+		}, nil
+	}
+
+	return &authenticationpb.ModificationResponse{
+		Success: true,
+	}, nil
+}
+
+func (m *ModificationServer) ChangePassword(
+	ctx context.Context,
+	req *authenticationpb.PasswordResetRequest,
 ) (*authenticationpb.ModificationResponse, error) {
 
 	log.Println("Password change:", req.Email)
@@ -205,7 +301,37 @@ func (m *ModificationServer) ChangePasswd(
 		}, nil
 	}
 
-	//TODO
+	verified, verifyErr := VerifyOTP(req.Email, req.SecretHash)
+	if verifyErr != nil || !verified {
+		return &authenticationpb.ModificationResponse{
+			Success: false,
+			Error:   "Invalid OTP",
+		}, nil
+	}
+
+	updateQuery := `
+		UPDATE users
+		SET password_hash = $1
+		WHERE email = $2
+	`
+
+	cmdTag, err := db.Pool.Exec(
+		ctx,
+		updateQuery,
+		req.NewPasswordHash,
+		req.Email,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return &authenticationpb.ModificationResponse{
+			Success: false,
+			Error:   "user not found",
+		}, nil
+	}
 
 	return &authenticationpb.ModificationResponse{
 		Success: true,

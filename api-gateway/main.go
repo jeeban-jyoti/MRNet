@@ -40,6 +40,7 @@ func main() {
 	http.HandleFunc("/cred-login", gateway.credLoginHandler)
 	http.HandleFunc("/token-login", gateway.tokenLoginHandler)
 	http.HandleFunc("/userid-change", gateway.changeUseridHandler)
+	http.HandleFunc("/request-passwd-change", gateway.requestChangePasswdHandler)
 	http.HandleFunc("/passwd-change", gateway.changePasswdHandler)
 
 	log.Println("API Gateway running on :8080")
@@ -183,13 +184,45 @@ func (g *Gateway) changeUseridHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(out)
 }
 
+func (g *Gateway) requestChangePasswdHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.RequestPasswordChangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.modificationClient.RequestChangePassword(ctx, &authenticationpb.RequestChangePasswordRequest{
+		Email: req.Email,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := models.ModificationResponse{
+		Success: resp.Success,
+		Error:   resp.Error,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
 func (g *Gateway) changePasswdHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req models.PasswdChangeRequest
+	var req models.PasswordChangeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -199,7 +232,7 @@ func (g *Gateway) changePasswdHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp, err := g.modificationClient.ChangePassword(ctx,
-		&authenticationpb.PasswdResetRequest{
+		&authenticationpb.PasswordResetRequest{
 			Email:           req.Email,
 			SecretHash:      req.SecretHash,
 			NewPasswordHash: req.NewPasswordHash,

@@ -21,7 +21,11 @@ type CredentialsLoginRequest struct {
 	PasswordHash string `json:"password"`
 }
 
-type PasswdChangeRequest struct {
+type RequestPasswordChangeRequest struct {
+	Email string `json:"email"`
+}
+
+type PasswordChangeRequest struct {
 	Email           string `json:"email"`
 	SecretHash      string `json:"secretHash"`
 	NewPasswordHash string `json:"newPasswordHash"`

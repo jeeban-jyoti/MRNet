@@ -270,8 +270,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ModificationServiceClient interface {
-	RequestChangePassword(ctx context.Context, in *RequestChangePasswordRequest, opts ...grpc.CallOption) (*RequestChangePasswordResponse, error)
-	ChangePassword(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error)
+	RequestChangePassword(ctx context.Context, in *RequestChangePasswordRequest, opts ...grpc.CallOption) (*ModificationResponse, error)
+	ChangePassword(ctx context.Context, in *PasswordResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error)
 	ChangeUserId(ctx context.Context, in *UserIdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error)
 }
 
@@ -283,9 +283,9 @@ func NewModificationServiceClient(cc grpc.ClientConnInterface) ModificationServi
 	return &modificationServiceClient{cc}
 }
 
-func (c *modificationServiceClient) RequestChangePassword(ctx context.Context, in *RequestChangePasswordRequest, opts ...grpc.CallOption) (*RequestChangePasswordResponse, error) {
+func (c *modificationServiceClient) RequestChangePassword(ctx context.Context, in *RequestChangePasswordRequest, opts ...grpc.CallOption) (*ModificationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RequestChangePasswordResponse)
+	out := new(ModificationResponse)
 	err := c.cc.Invoke(ctx, ModificationService_RequestChangePassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func (c *modificationServiceClient) RequestChangePassword(ctx context.Context, i
 	return out, nil
 }
 
-func (c *modificationServiceClient) ChangePassword(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error) {
+func (c *modificationServiceClient) ChangePassword(ctx context.Context, in *PasswordResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ModificationResponse)
 	err := c.cc.Invoke(ctx, ModificationService_ChangePassword_FullMethodName, in, out, cOpts...)
@@ -317,8 +317,8 @@ func (c *modificationServiceClient) ChangeUserId(ctx context.Context, in *UserId
 // All implementations must embed UnimplementedModificationServiceServer
 // for forward compatibility.
 type ModificationServiceServer interface {
-	RequestChangePassword(context.Context, *RequestChangePasswordRequest) (*RequestChangePasswordResponse, error)
-	ChangePassword(context.Context, *PasswdResetRequest) (*ModificationResponse, error)
+	RequestChangePassword(context.Context, *RequestChangePasswordRequest) (*ModificationResponse, error)
+	ChangePassword(context.Context, *PasswordResetRequest) (*ModificationResponse, error)
 	ChangeUserId(context.Context, *UserIdResetRequest) (*ModificationResponse, error)
 	mustEmbedUnimplementedModificationServiceServer()
 }
@@ -330,10 +330,10 @@ type ModificationServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedModificationServiceServer struct{}
 
-func (UnimplementedModificationServiceServer) RequestChangePassword(context.Context, *RequestChangePasswordRequest) (*RequestChangePasswordResponse, error) {
+func (UnimplementedModificationServiceServer) RequestChangePassword(context.Context, *RequestChangePasswordRequest) (*ModificationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RequestChangePassword not implemented")
 }
-func (UnimplementedModificationServiceServer) ChangePassword(context.Context, *PasswdResetRequest) (*ModificationResponse, error) {
+func (UnimplementedModificationServiceServer) ChangePassword(context.Context, *PasswordResetRequest) (*ModificationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
 }
 func (UnimplementedModificationServiceServer) ChangeUserId(context.Context, *UserIdResetRequest) (*ModificationResponse, error) {
@@ -379,7 +379,7 @@ func _ModificationService_RequestChangePassword_Handler(srv interface{}, ctx con
 }
 
 func _ModificationService_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PasswdResetRequest)
+	in := new(PasswordResetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func _ModificationService_ChangePassword_Handler(srv interface{}, ctx context.Co
 		FullMethod: ModificationService_ChangePassword_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ModificationServiceServer).ChangePassword(ctx, req.(*PasswdResetRequest))
+		return srv.(ModificationServiceServer).ChangePassword(ctx, req.(*PasswordResetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

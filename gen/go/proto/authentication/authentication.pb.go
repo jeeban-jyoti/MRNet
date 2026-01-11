@@ -281,51 +281,7 @@ func (x *RequestChangePasswordRequest) GetEmail() string {
 	return ""
 }
 
-type RequestChangePasswordResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SecretSent    bool                   `protobuf:"varint,1,opt,name=secretSent,proto3" json:"secretSent,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RequestChangePasswordResponse) Reset() {
-	*x = RequestChangePasswordResponse{}
-	mi := &file_authentication_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RequestChangePasswordResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RequestChangePasswordResponse) ProtoMessage() {}
-
-func (x *RequestChangePasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_authentication_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RequestChangePasswordResponse.ProtoReflect.Descriptor instead.
-func (*RequestChangePasswordResponse) Descriptor() ([]byte, []int) {
-	return file_authentication_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *RequestChangePasswordResponse) GetSecretSent() bool {
-	if x != nil {
-		return x.SecretSent
-	}
-	return false
-}
-
-type PasswdResetRequest struct {
+type PasswordResetRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Email           string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	SecretHash      string                 `protobuf:"bytes,2,opt,name=secretHash,proto3" json:"secretHash,omitempty"`
@@ -334,21 +290,21 @@ type PasswdResetRequest struct {
 	sizeCache       protoimpl.SizeCache
 }
 
-func (x *PasswdResetRequest) Reset() {
-	*x = PasswdResetRequest{}
-	mi := &file_authentication_proto_msgTypes[6]
+func (x *PasswordResetRequest) Reset() {
+	*x = PasswordResetRequest{}
+	mi := &file_authentication_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PasswdResetRequest) String() string {
+func (x *PasswordResetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PasswdResetRequest) ProtoMessage() {}
+func (*PasswordResetRequest) ProtoMessage() {}
 
-func (x *PasswdResetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_authentication_proto_msgTypes[6]
+func (x *PasswordResetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_authentication_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,26 +315,26 @@ func (x *PasswdResetRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PasswdResetRequest.ProtoReflect.Descriptor instead.
-func (*PasswdResetRequest) Descriptor() ([]byte, []int) {
-	return file_authentication_proto_rawDescGZIP(), []int{6}
+// Deprecated: Use PasswordResetRequest.ProtoReflect.Descriptor instead.
+func (*PasswordResetRequest) Descriptor() ([]byte, []int) {
+	return file_authentication_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *PasswdResetRequest) GetEmail() string {
+func (x *PasswordResetRequest) GetEmail() string {
 	if x != nil {
 		return x.Email
 	}
 	return ""
 }
 
-func (x *PasswdResetRequest) GetSecretHash() string {
+func (x *PasswordResetRequest) GetSecretHash() string {
 	if x != nil {
 		return x.SecretHash
 	}
 	return ""
 }
 
-func (x *PasswdResetRequest) GetNewPasswordHash() string {
+func (x *PasswordResetRequest) GetNewPasswordHash() string {
 	if x != nil {
 		return x.NewPasswordHash
 	}
@@ -396,7 +352,7 @@ type UserIdResetRequest struct {
 
 func (x *UserIdResetRequest) Reset() {
 	*x = UserIdResetRequest{}
-	mi := &file_authentication_proto_msgTypes[7]
+	mi := &file_authentication_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +364,7 @@ func (x *UserIdResetRequest) String() string {
 func (*UserIdResetRequest) ProtoMessage() {}
 
 func (x *UserIdResetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_authentication_proto_msgTypes[7]
+	mi := &file_authentication_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +377,7 @@ func (x *UserIdResetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserIdResetRequest.ProtoReflect.Descriptor instead.
 func (*UserIdResetRequest) Descriptor() ([]byte, []int) {
-	return file_authentication_proto_rawDescGZIP(), []int{7}
+	return file_authentication_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UserIdResetRequest) GetOldId() string {
@@ -455,7 +411,7 @@ type ModificationResponse struct {
 
 func (x *ModificationResponse) Reset() {
 	*x = ModificationResponse{}
-	mi := &file_authentication_proto_msgTypes[8]
+	mi := &file_authentication_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +423,7 @@ func (x *ModificationResponse) String() string {
 func (*ModificationResponse) ProtoMessage() {}
 
 func (x *ModificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_authentication_proto_msgTypes[8]
+	mi := &file_authentication_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +436,7 @@ func (x *ModificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModificationResponse.ProtoReflect.Descriptor instead.
 func (*ModificationResponse) Descriptor() ([]byte, []int) {
-	return file_authentication_proto_rawDescGZIP(), []int{8}
+	return file_authentication_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ModificationResponse) GetSuccess() bool {
@@ -516,12 +472,8 @@ const file_authentication_proto_rawDesc = "" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\"\n" +
 	"\fpasswordHash\x18\x03 \x01(\tR\fpasswordHash\"4\n" +
 	"\x1cRequestChangePasswordRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\"?\n" +
-	"\x1dRequestChangePasswordResponse\x12\x1e\n" +
-	"\n" +
-	"secretSent\x18\x01 \x01(\bR\n" +
-	"secretSent\"t\n" +
-	"\x12PasswdResetRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"v\n" +
+	"\x14PasswordResetRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1e\n" +
 	"\n" +
 	"secretHash\x18\x02 \x01(\tR\n" +
@@ -538,10 +490,10 @@ const file_authentication_proto_rawDesc = "" +
 	"\x14LoginWithCredentials\x12\x1a.mrnet.v1.UserLoginDetails\x1a\x17.mrnet.v1.LoginResponse\x12=\n" +
 	"\x0eLoginWithToken\x12\x12.mrnet.v1.JWTToken\x1a\x17.mrnet.v1.LoginResponse2O\n" +
 	"\rSignupService\x12>\n" +
-	"\x06Signup\x12\x1b.mrnet.v1.UserSignupDetails\x1a\x17.mrnet.v1.LoginResponse2\x9d\x02\n" +
-	"\x13ModificationService\x12h\n" +
-	"\x15RequestChangePassword\x12&.mrnet.v1.RequestChangePasswordRequest\x1a'.mrnet.v1.RequestChangePasswordResponse\x12N\n" +
-	"\x0eChangePassword\x12\x1c.mrnet.v1.PasswdResetRequest\x1a\x1e.mrnet.v1.ModificationResponse\x12L\n" +
+	"\x06Signup\x12\x1b.mrnet.v1.UserSignupDetails\x1a\x17.mrnet.v1.LoginResponse2\x96\x02\n" +
+	"\x13ModificationService\x12_\n" +
+	"\x15RequestChangePassword\x12&.mrnet.v1.RequestChangePasswordRequest\x1a\x1e.mrnet.v1.ModificationResponse\x12P\n" +
+	"\x0eChangePassword\x12\x1e.mrnet.v1.PasswordResetRequest\x1a\x1e.mrnet.v1.ModificationResponse\x12L\n" +
 	"\fChangeUserId\x12\x1c.mrnet.v1.UserIdResetRequest\x1a\x1e.mrnet.v1.ModificationResponseB\"Z /authentication;authenticationpbb\x06proto3"
 
 var (
@@ -556,31 +508,30 @@ func file_authentication_proto_rawDescGZIP() []byte {
 	return file_authentication_proto_rawDescData
 }
 
-var file_authentication_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_authentication_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_authentication_proto_goTypes = []any{
-	(*UserLoginDetails)(nil),              // 0: mrnet.v1.UserLoginDetails
-	(*LoginResponse)(nil),                 // 1: mrnet.v1.LoginResponse
-	(*JWTToken)(nil),                      // 2: mrnet.v1.JWTToken
-	(*UserSignupDetails)(nil),             // 3: mrnet.v1.UserSignupDetails
-	(*RequestChangePasswordRequest)(nil),  // 4: mrnet.v1.RequestChangePasswordRequest
-	(*RequestChangePasswordResponse)(nil), // 5: mrnet.v1.RequestChangePasswordResponse
-	(*PasswdResetRequest)(nil),            // 6: mrnet.v1.PasswdResetRequest
-	(*UserIdResetRequest)(nil),            // 7: mrnet.v1.UserIdResetRequest
-	(*ModificationResponse)(nil),          // 8: mrnet.v1.ModificationResponse
+	(*UserLoginDetails)(nil),             // 0: mrnet.v1.UserLoginDetails
+	(*LoginResponse)(nil),                // 1: mrnet.v1.LoginResponse
+	(*JWTToken)(nil),                     // 2: mrnet.v1.JWTToken
+	(*UserSignupDetails)(nil),            // 3: mrnet.v1.UserSignupDetails
+	(*RequestChangePasswordRequest)(nil), // 4: mrnet.v1.RequestChangePasswordRequest
+	(*PasswordResetRequest)(nil),         // 5: mrnet.v1.PasswordResetRequest
+	(*UserIdResetRequest)(nil),           // 6: mrnet.v1.UserIdResetRequest
+	(*ModificationResponse)(nil),         // 7: mrnet.v1.ModificationResponse
 }
 var file_authentication_proto_depIdxs = []int32{
 	0, // 0: mrnet.v1.LoginService.LoginWithCredentials:input_type -> mrnet.v1.UserLoginDetails
 	2, // 1: mrnet.v1.LoginService.LoginWithToken:input_type -> mrnet.v1.JWTToken
 	3, // 2: mrnet.v1.SignupService.Signup:input_type -> mrnet.v1.UserSignupDetails
 	4, // 3: mrnet.v1.ModificationService.RequestChangePassword:input_type -> mrnet.v1.RequestChangePasswordRequest
-	6, // 4: mrnet.v1.ModificationService.ChangePassword:input_type -> mrnet.v1.PasswdResetRequest
-	7, // 5: mrnet.v1.ModificationService.ChangeUserId:input_type -> mrnet.v1.UserIdResetRequest
+	5, // 4: mrnet.v1.ModificationService.ChangePassword:input_type -> mrnet.v1.PasswordResetRequest
+	6, // 5: mrnet.v1.ModificationService.ChangeUserId:input_type -> mrnet.v1.UserIdResetRequest
 	1, // 6: mrnet.v1.LoginService.LoginWithCredentials:output_type -> mrnet.v1.LoginResponse
 	1, // 7: mrnet.v1.LoginService.LoginWithToken:output_type -> mrnet.v1.LoginResponse
 	1, // 8: mrnet.v1.SignupService.Signup:output_type -> mrnet.v1.LoginResponse
-	5, // 9: mrnet.v1.ModificationService.RequestChangePassword:output_type -> mrnet.v1.RequestChangePasswordResponse
-	8, // 10: mrnet.v1.ModificationService.ChangePassword:output_type -> mrnet.v1.ModificationResponse
-	8, // 11: mrnet.v1.ModificationService.ChangeUserId:output_type -> mrnet.v1.ModificationResponse
+	7, // 9: mrnet.v1.ModificationService.RequestChangePassword:output_type -> mrnet.v1.ModificationResponse
+	7, // 10: mrnet.v1.ModificationService.ChangePassword:output_type -> mrnet.v1.ModificationResponse
+	7, // 11: mrnet.v1.ModificationService.ChangeUserId:output_type -> mrnet.v1.ModificationResponse
 	6, // [6:12] is the sub-list for method output_type
 	0, // [0:6] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -599,7 +550,7 @@ func file_authentication_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authentication_proto_rawDesc), len(file_authentication_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   3,
 		},
