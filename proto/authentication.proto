@@ -13,13 +13,14 @@ service SignupService {
 }
 
 service ModificationService {
-    rpc ChangePasswd (PasswdResetRequest) returns (ModificationSuccess);
-    rpc ChangeUserId (UserIdPasswd) returns (ModificationSuccess);
+    rpc RequestChangePassword (RequestChangePasswordRequest) returns (RequestChangePasswordResponse);
+    rpc ChangePassword (PasswdResetRequest) returns (ModificationResponse);
+    rpc ChangeUserId (UserIdResetRequest) returns (ModificationResponse);
 }
 
 message UserLoginDetails {
-    string emailOrId = 1;
-    string passwdHash = 2;
+    string id = 1;
+    string passwordHash = 2;
 }
 
 message LoginResponse {
@@ -35,20 +36,30 @@ message JWTToken {
 message UserSignupDetails {
     string email = 1;
     string id = 2;
-    string passwdHash = 3;
+    string passwordHash = 3;
+}
+
+message RequestChangePasswordRequest {
+    string email = 1;
+}
+
+message RequestChangePasswordResponse {
+    bool secretSent = 1;
 }
 
 message PasswdResetRequest {
     string email = 1;
     string secretHash = 2;
+    string newPasswordHash = 3;
 }
 
-message UserIdPasswd {
-    string email = 1;
-    string passwdHash = 2;
+message UserIdResetRequest {
+    string oldId = 1;
+    string newId = 2;
+    string passwordHash = 3;
 }
 
-message ModificationSuccess {
+message ModificationResponse {
     bool success = 1;
     string error = 2;
 }

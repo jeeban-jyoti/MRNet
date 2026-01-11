@@ -261,16 +261,18 @@ var SignupService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	ModificationService_ChangePasswd_FullMethodName = "/mrnet.v1.ModificationService/ChangePasswd"
-	ModificationService_ChangeUserId_FullMethodName = "/mrnet.v1.ModificationService/ChangeUserId"
+	ModificationService_RequestChangePassword_FullMethodName = "/mrnet.v1.ModificationService/RequestChangePassword"
+	ModificationService_ChangePassword_FullMethodName        = "/mrnet.v1.ModificationService/ChangePassword"
+	ModificationService_ChangeUserId_FullMethodName          = "/mrnet.v1.ModificationService/ChangeUserId"
 )
 
 // ModificationServiceClient is the client API for ModificationService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ModificationServiceClient interface {
-	ChangePasswd(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*ModificationSuccess, error)
-	ChangeUserId(ctx context.Context, in *UserIdPasswd, opts ...grpc.CallOption) (*ModificationSuccess, error)
+	RequestChangePassword(ctx context.Context, in *RequestChangePasswordRequest, opts ...grpc.CallOption) (*RequestChangePasswordResponse, error)
+	ChangePassword(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error)
+	ChangeUserId(ctx context.Context, in *UserIdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error)
 }
 
 type modificationServiceClient struct {
@@ -281,19 +283,29 @@ func NewModificationServiceClient(cc grpc.ClientConnInterface) ModificationServi
 	return &modificationServiceClient{cc}
 }
 
-func (c *modificationServiceClient) ChangePasswd(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*ModificationSuccess, error) {
+func (c *modificationServiceClient) RequestChangePassword(ctx context.Context, in *RequestChangePasswordRequest, opts ...grpc.CallOption) (*RequestChangePasswordResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ModificationSuccess)
-	err := c.cc.Invoke(ctx, ModificationService_ChangePasswd_FullMethodName, in, out, cOpts...)
+	out := new(RequestChangePasswordResponse)
+	err := c.cc.Invoke(ctx, ModificationService_RequestChangePassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *modificationServiceClient) ChangeUserId(ctx context.Context, in *UserIdPasswd, opts ...grpc.CallOption) (*ModificationSuccess, error) {
+func (c *modificationServiceClient) ChangePassword(ctx context.Context, in *PasswdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ModificationSuccess)
+	out := new(ModificationResponse)
+	err := c.cc.Invoke(ctx, ModificationService_ChangePassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *modificationServiceClient) ChangeUserId(ctx context.Context, in *UserIdResetRequest, opts ...grpc.CallOption) (*ModificationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModificationResponse)
 	err := c.cc.Invoke(ctx, ModificationService_ChangeUserId_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -305,8 +317,9 @@ func (c *modificationServiceClient) ChangeUserId(ctx context.Context, in *UserId
 // All implementations must embed UnimplementedModificationServiceServer
 // for forward compatibility.
 type ModificationServiceServer interface {
-	ChangePasswd(context.Context, *PasswdResetRequest) (*ModificationSuccess, error)
-	ChangeUserId(context.Context, *UserIdPasswd) (*ModificationSuccess, error)
+	RequestChangePassword(context.Context, *RequestChangePasswordRequest) (*RequestChangePasswordResponse, error)
+	ChangePassword(context.Context, *PasswdResetRequest) (*ModificationResponse, error)
+	ChangeUserId(context.Context, *UserIdResetRequest) (*ModificationResponse, error)
 	mustEmbedUnimplementedModificationServiceServer()
 }
 
@@ -317,10 +330,13 @@ type ModificationServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedModificationServiceServer struct{}
 
-func (UnimplementedModificationServiceServer) ChangePasswd(context.Context, *PasswdResetRequest) (*ModificationSuccess, error) {
-	return nil, status.Error(codes.Unimplemented, "method ChangePasswd not implemented")
+func (UnimplementedModificationServiceServer) RequestChangePassword(context.Context, *RequestChangePasswordRequest) (*RequestChangePasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestChangePassword not implemented")
 }
-func (UnimplementedModificationServiceServer) ChangeUserId(context.Context, *UserIdPasswd) (*ModificationSuccess, error) {
+func (UnimplementedModificationServiceServer) ChangePassword(context.Context, *PasswdResetRequest) (*ModificationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (UnimplementedModificationServiceServer) ChangeUserId(context.Context, *UserIdResetRequest) (*ModificationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangeUserId not implemented")
 }
 func (UnimplementedModificationServiceServer) mustEmbedUnimplementedModificationServiceServer() {}
@@ -344,26 +360,44 @@ func RegisterModificationServiceServer(s grpc.ServiceRegistrar, srv Modification
 	s.RegisterService(&ModificationService_ServiceDesc, srv)
 }
 
-func _ModificationService_ChangePasswd_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ModificationService_RequestChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestChangePasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModificationServiceServer).RequestChangePassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModificationService_RequestChangePassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModificationServiceServer).RequestChangePassword(ctx, req.(*RequestChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ModificationService_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PasswdResetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ModificationServiceServer).ChangePasswd(ctx, in)
+		return srv.(ModificationServiceServer).ChangePassword(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ModificationService_ChangePasswd_FullMethodName,
+		FullMethod: ModificationService_ChangePassword_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ModificationServiceServer).ChangePasswd(ctx, req.(*PasswdResetRequest))
+		return srv.(ModificationServiceServer).ChangePassword(ctx, req.(*PasswdResetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ModificationService_ChangeUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UserIdPasswd)
+	in := new(UserIdResetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -375,7 +409,7 @@ func _ModificationService_ChangeUserId_Handler(srv interface{}, ctx context.Cont
 		FullMethod: ModificationService_ChangeUserId_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ModificationServiceServer).ChangeUserId(ctx, req.(*UserIdPasswd))
+		return srv.(ModificationServiceServer).ChangeUserId(ctx, req.(*UserIdResetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -388,8 +422,12 @@ var ModificationService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ModificationServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ChangePasswd",
-			Handler:    _ModificationService_ChangePasswd_Handler,
+			MethodName: "RequestChangePassword",
+			Handler:    _ModificationService_RequestChangePassword_Handler,
+		},
+		{
+			MethodName: "ChangePassword",
+			Handler:    _ModificationService_ChangePassword_Handler,
 		},
 		{
 			MethodName: "ChangeUserId",

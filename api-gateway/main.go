@@ -8,6 +8,7 @@ import (
 	"time"
 
 	authenticationpb "mrnet/gen/go/proto/authentication"
+	"mrnet/models"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,42 +18,6 @@ type Gateway struct {
 	signupClient       authenticationpb.SignupServiceClient
 	loginClient        authenticationpb.LoginServiceClient
 	modificationClient authenticationpb.ModificationServiceClient
-}
-
-type SignupRequest struct {
-	Email    string `json:"email"`
-	Id       string `json:"id"`
-	Password string `json:"password"`
-}
-
-type LoggedInResponse struct {
-	Success bool   `json:"success"`
-	Token   string `json:"token,omitempty"`
-	Error   string `json:"error,omitempty"`
-}
-
-type TokenLoginRequest struct {
-	JWTToken string `json:"token"`
-}
-
-type CredentialsLoginRequest struct {
-	Id       string `json:"id"`
-	Password string `json:"password"`
-}
-
-type PasswdChangeRequest struct {
-	Email      string `json:"email"`
-	SecretHash string `json:"secretHash"`
-}
-
-type UserIDChangeRequest struct {
-	Email      string `json:"email"`
-	PasswdHash string `json:"passwdHash"`
-}
-
-type ModificationResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error,omitempty"`
 }
 
 func main() {
@@ -87,7 +52,7 @@ func (g *Gateway) signupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req SignupRequest
+	var req models.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -97,16 +62,16 @@ func (g *Gateway) signupHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp, err := g.signupClient.Signup(ctx, &authenticationpb.UserSignupDetails{
-		Email:      req.Email,
-		Id:         req.Id,
-		PasswdHash: req.Password,
+		Email:        req.Email,
+		Id:           req.Id,
+		PasswordHash: req.PasswordHash,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	out := LoggedInResponse{
+	out := models.LoggedInResponse{
 		Success: resp.LoginSuccess,
 		Token:   resp.JwtToken,
 		Error:   resp.Error,
@@ -122,7 +87,7 @@ func (g *Gateway) credLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req CredentialsLoginRequest
+	var req models.CredentialsLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -132,15 +97,15 @@ func (g *Gateway) credLoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp, err := g.loginClient.LoginWithCredentials(ctx, &authenticationpb.UserLoginDetails{
-		EmailOrId:  req.Id,
-		PasswdHash: req.Password,
+		Id:           req.Id,
+		PasswordHash: req.PasswordHash,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	out := LoggedInResponse{
+	out := models.LoggedInResponse{
 		Success: resp.LoginSuccess,
 		Token:   resp.JwtToken,
 		Error:   resp.Error,
@@ -156,7 +121,7 @@ func (g *Gateway) tokenLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req TokenLoginRequest
+	var req models.TokenLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -173,7 +138,7 @@ func (g *Gateway) tokenLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out := LoggedInResponse{
+	out := models.LoggedInResponse{
 		Success: resp.LoginSuccess,
 		Token:   resp.JwtToken,
 		Error:   resp.Error,
@@ -189,7 +154,7 @@ func (g *Gateway) changeUseridHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req UserIDChangeRequest
+	var req models.UserIDChangeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -199,16 +164,17 @@ func (g *Gateway) changeUseridHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp, err := g.modificationClient.ChangeUserId(ctx,
-		&authenticationpb.UserIdPasswd{
-			Email:      req.Email,
-			PasswdHash: req.PasswdHash,
+		&authenticationpb.UserIdResetRequest{
+			OldId:        req.OldId,
+			NewId:        req.NewId,
+			PasswordHash: req.PasswordHash,
 		})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	out := ModificationResponse{
+	out := models.ModificationResponse{
 		Success: resp.Success,
 		Error:   resp.Error,
 	}
@@ -223,7 +189,7 @@ func (g *Gateway) changePasswdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req PasswdChangeRequest
+	var req models.PasswdChangeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
@@ -232,17 +198,18 @@ func (g *Gateway) changePasswdHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	resp, err := g.modificationClient.ChangePasswd(ctx,
+	resp, err := g.modificationClient.ChangePassword(ctx,
 		&authenticationpb.PasswdResetRequest{
-			Email:      req.Email,
-			SecretHash: req.SecretHash,
+			Email:           req.Email,
+			SecretHash:      req.SecretHash,
+			NewPasswordHash: req.NewPasswordHash,
 		})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	out := LoggedInResponse{
+	out := models.ModificationResponse{
 		Success: resp.Success,
 		Error:   resp.Error,
 	}
