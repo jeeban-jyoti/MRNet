@@ -79,6 +79,7 @@ func HashOTP(otp string) string {
 
 func SaveOTP(identifier string) error {
 	otp, err := Generate6DigitOTP()
+	log.Println(otp)
 	if err != nil {
 		return err
 	}
@@ -107,14 +108,15 @@ func SaveOTP(identifier string) error {
 
 func VerifyOTP(identifier string, inputOTP string) (bool, error) {
 	key := "otp:" + identifier
-
+	log.Println(key)
 	storedHash, err := cache.RDB.Get(cache.Ctx, key).Result()
+	log.Println("hello" + storedHash)
 	if err != nil {
 		// key missing or expired
 		return false, nil
 	}
 
-	if HashOTP(inputOTP) != storedHash {
+	if inputOTP != storedHash {
 		return false, nil
 	}
 
@@ -240,7 +242,7 @@ func (l *LoginServer) LoginWithToken(
 		cache.Ctx,
 		query,
 		userid,
-	).Scan(&user.Id, &user.PasswordHash)
+	).Scan(&user.Id)
 
 	if dbErr != nil {
 		return nil, dbErr
@@ -275,6 +277,23 @@ func (m *ModificationServer) RequestChangePassword(
 		}, nil
 	}
 
+	cmdTag, err := db.Pool.Exec(
+		cache.Ctx,
+		"select email from users where email=$1",
+		req.Email,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return &authenticationpb.ModificationResponse{
+			Success: false,
+			Error:   "update failed",
+		}, nil
+	}
+
 	if SaveOTP(req.Email) != nil {
 		return &authenticationpb.ModificationResponse{
 			Success: false,
@@ -302,7 +321,13 @@ func (m *ModificationServer) ChangePassword(
 	}
 
 	verified, verifyErr := VerifyOTP(req.Email, req.SecretHash)
-	if verifyErr != nil || !verified {
+	if verifyErr != nil {
+		return &authenticationpb.ModificationResponse{
+			Success: false,
+			Error:   "error verifying",
+		}, nil
+	}
+	if !verified {
 		return &authenticationpb.ModificationResponse{
 			Success: false,
 			Error:   "Invalid OTP",

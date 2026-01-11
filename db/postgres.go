@@ -10,7 +10,7 @@ import (
 var Pool *pgxpool.Pool
 
 func InitDB() {
-	dsn := "postgres://appuser:apppass@localhost:5432/appdb"
+	dsn := "postgres://jeeban_jyoti_patra@localhost:5432/mrnet"
 
 	var err error
 	Pool, err = pgxpool.New(context.Background(), dsn)
