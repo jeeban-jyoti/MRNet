@@ -18,3 +18,7 @@ func InitDB() {
 		log.Fatal(err)
 	}
 }
+
+func CloseDB() {
+	Pool.Close()
+}

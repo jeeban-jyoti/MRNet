@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	LoginService_LoginWithCredentials_FullMethodName = "/mrnet.v1.LoginService/LoginWithCredentials"
 	LoginService_LoginWithToken_FullMethodName       = "/mrnet.v1.LoginService/LoginWithToken"
+	LoginService_RenewAccessToken_FullMethodName     = "/mrnet.v1.LoginService/RenewAccessToken"
 )
 
 // LoginServiceClient is the client API for LoginService service.
@@ -29,6 +30,7 @@ const (
 type LoginServiceClient interface {
 	LoginWithCredentials(ctx context.Context, in *UserLoginDetails, opts ...grpc.CallOption) (*LoginResponse, error)
 	LoginWithToken(ctx context.Context, in *JWTToken, opts ...grpc.CallOption) (*LoginResponse, error)
+	RenewAccessToken(ctx context.Context, in *RenewJWTToken, opts ...grpc.CallOption) (*JWTToken, error)
 }
 
 type loginServiceClient struct {
@@ -59,12 +61,23 @@ func (c *loginServiceClient) LoginWithToken(ctx context.Context, in *JWTToken, o
 	return out, nil
 }
 
+func (c *loginServiceClient) RenewAccessToken(ctx context.Context, in *RenewJWTToken, opts ...grpc.CallOption) (*JWTToken, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(JWTToken)
+	err := c.cc.Invoke(ctx, LoginService_RenewAccessToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LoginServiceServer is the server API for LoginService service.
 // All implementations must embed UnimplementedLoginServiceServer
 // for forward compatibility.
 type LoginServiceServer interface {
 	LoginWithCredentials(context.Context, *UserLoginDetails) (*LoginResponse, error)
 	LoginWithToken(context.Context, *JWTToken) (*LoginResponse, error)
+	RenewAccessToken(context.Context, *RenewJWTToken) (*JWTToken, error)
 	mustEmbedUnimplementedLoginServiceServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedLoginServiceServer) LoginWithCredentials(context.Context, *Us
 }
 func (UnimplementedLoginServiceServer) LoginWithToken(context.Context, *JWTToken) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LoginWithToken not implemented")
+}
+func (UnimplementedLoginServiceServer) RenewAccessToken(context.Context, *RenewJWTToken) (*JWTToken, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenewAccessToken not implemented")
 }
 func (UnimplementedLoginServiceServer) mustEmbedUnimplementedLoginServiceServer() {}
 func (UnimplementedLoginServiceServer) testEmbeddedByValue()                      {}
@@ -138,6 +154,24 @@ func _LoginService_LoginWithToken_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LoginService_RenewAccessToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenewJWTToken)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoginServiceServer).RenewAccessToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoginService_RenewAccessToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoginServiceServer).RenewAccessToken(ctx, req.(*RenewJWTToken))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LoginService_ServiceDesc is the grpc.ServiceDesc for LoginService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,112 @@ var LoginService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginWithToken",
 			Handler:    _LoginService_LoginWithToken_Handler,
+		},
+		{
+			MethodName: "RenewAccessToken",
+			Handler:    _LoginService_RenewAccessToken_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "authentication.proto",
+}
+
+const (
+	LogoutService_LogoutWithAccessToken_FullMethodName = "/mrnet.v1.LogoutService/LogoutWithAccessToken"
+)
+
+// LogoutServiceClient is the client API for LogoutService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type LogoutServiceClient interface {
+	LogoutWithAccessToken(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+}
+
+type logoutServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewLogoutServiceClient(cc grpc.ClientConnInterface) LogoutServiceClient {
+	return &logoutServiceClient{cc}
+}
+
+func (c *logoutServiceClient) LogoutWithAccessToken(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LogoutResponse)
+	err := c.cc.Invoke(ctx, LogoutService_LogoutWithAccessToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// LogoutServiceServer is the server API for LogoutService service.
+// All implementations must embed UnimplementedLogoutServiceServer
+// for forward compatibility.
+type LogoutServiceServer interface {
+	LogoutWithAccessToken(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	mustEmbedUnimplementedLogoutServiceServer()
+}
+
+// UnimplementedLogoutServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedLogoutServiceServer struct{}
+
+func (UnimplementedLogoutServiceServer) LogoutWithAccessToken(context.Context, *LogoutRequest) (*LogoutResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LogoutWithAccessToken not implemented")
+}
+func (UnimplementedLogoutServiceServer) mustEmbedUnimplementedLogoutServiceServer() {}
+func (UnimplementedLogoutServiceServer) testEmbeddedByValue()                       {}
+
+// UnsafeLogoutServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to LogoutServiceServer will
+// result in compilation errors.
+type UnsafeLogoutServiceServer interface {
+	mustEmbedUnimplementedLogoutServiceServer()
+}
+
+func RegisterLogoutServiceServer(s grpc.ServiceRegistrar, srv LogoutServiceServer) {
+	// If the following call panics, it indicates UnimplementedLogoutServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&LogoutService_ServiceDesc, srv)
+}
+
+func _LogoutService_LogoutWithAccessToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogoutServiceServer).LogoutWithAccessToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LogoutService_LogoutWithAccessToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogoutServiceServer).LogoutWithAccessToken(ctx, req.(*LogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// LogoutService_ServiceDesc is the grpc.ServiceDesc for LogoutService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var LogoutService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "mrnet.v1.LogoutService",
+	HandlerType: (*LogoutServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "LogoutWithAccessToken",
+			Handler:    _LogoutService_LogoutWithAccessToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

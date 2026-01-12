@@ -6,6 +6,11 @@ option go_package = "/authentication;authenticationpb";
 service LoginService {
     rpc LoginWithCredentials (UserLoginDetails) returns (LoginResponse);
     rpc LoginWithToken (JWTToken) returns (LoginResponse);
+    rpc RenewAccessToken (RenewJWTToken) returns (JWTToken);
+}
+
+service LogoutService {
+    rpc LogoutWithAccessToken (LogoutRequest) returns (LogoutResponse);
 }
 
 service SignupService {
@@ -25,12 +30,13 @@ message UserLoginDetails {
 
 message LoginResponse {
     bool loginSuccess = 1;
-    string jwtToken = 2;
-    string error = 3;
+    string refreshJwtToken = 2;
+    string accessJwtToken = 3;
+    string error = 4;
 }
 
 message JWTToken {
-    string jwtToken = 1;
+    string accessJwtToken = 1;
 }
 
 message UserSignupDetails {
@@ -56,6 +62,20 @@ message UserIdResetRequest {
 }
 
 message ModificationResponse {
+    bool success = 1;
+    string error = 2;
+}
+
+message RenewJWTToken {
+    string refreshToken = 1;
+}
+
+message LogoutRequest {
+    string id = 1;
+    string accessToken = 2;
+}
+
+message LogoutResponse {
     bool success = 1;
     string error = 2;
 }

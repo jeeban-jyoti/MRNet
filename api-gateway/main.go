@@ -18,6 +18,7 @@ type Gateway struct {
 	signupClient       authenticationpb.SignupServiceClient
 	loginClient        authenticationpb.LoginServiceClient
 	modificationClient authenticationpb.ModificationServiceClient
+	logoutClient       authenticationpb.LogoutServiceClient
 }
 
 func main() {
@@ -42,6 +43,8 @@ func main() {
 	http.HandleFunc("/userid-change", gateway.changeUseridHandler)
 	http.HandleFunc("/request-passwd-change", gateway.requestChangePasswdHandler)
 	http.HandleFunc("/passwd-change", gateway.changePasswdHandler)
+	http.HandleFunc("/renew-access-token", gateway.renewAccessTokenHandler)
+	http.HandleFunc("/logout", gateway.logoutHandler)
 
 	log.Println("API Gateway running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -73,9 +76,10 @@ func (g *Gateway) signupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := models.LoggedInResponse{
-		Success: resp.LoginSuccess,
-		Token:   resp.JwtToken,
-		Error:   resp.Error,
+		Success:      resp.LoginSuccess,
+		RefreshToken: resp.RefreshJwtToken,
+		AccessToken:  resp.AccessJwtToken,
+		Error:        resp.Error,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -107,9 +111,10 @@ func (g *Gateway) credLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := models.LoggedInResponse{
-		Success: resp.LoginSuccess,
-		Token:   resp.JwtToken,
-		Error:   resp.Error,
+		Success:      resp.LoginSuccess,
+		RefreshToken: resp.RefreshJwtToken,
+		AccessToken:  resp.AccessJwtToken,
+		Error:        resp.Error,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -132,7 +137,7 @@ func (g *Gateway) tokenLoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp, err := g.loginClient.LoginWithToken(ctx, &authenticationpb.JWTToken{
-		JwtToken: req.JWTToken,
+		AccessJwtToken: req.AccessJWTToken,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -140,9 +145,10 @@ func (g *Gateway) tokenLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := models.LoggedInResponse{
-		Success: resp.LoginSuccess,
-		Token:   resp.JwtToken,
-		Error:   resp.Error,
+		Success:      resp.LoginSuccess,
+		RefreshToken: resp.RefreshJwtToken,
+		AccessToken:  resp.AccessJwtToken,
+		Error:        resp.Error,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -243,6 +249,70 @@ func (g *Gateway) changePasswdHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := models.ModificationResponse{
+		Success: resp.Success,
+		Error:   resp.Error,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
+func (g *Gateway) renewAccessTokenHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.RenewTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.loginClient.RenewAccessToken(ctx, &authenticationpb.RenewJWTToken{
+		RefreshToken: req.RefreshToken,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := models.RenewTokenResponse{
+		AccessToken: resp.AccessJwtToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
+func (g *Gateway) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.LogoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.logoutClient.LogoutWithAccessToken(ctx, &authenticationpb.LogoutRequest{
+		Id:          req.Id,
+		AccessToken: req.AccessToken,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := models.LogoutResponse{
 		Success: resp.Success,
 		Error:   resp.Error,
 	}

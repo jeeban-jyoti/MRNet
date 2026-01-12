@@ -7,13 +7,22 @@ type SignupRequest struct {
 }
 
 type LoggedInResponse struct {
-	Success bool   `json:"success"`
-	Token   string `json:"token,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Success      bool   `json:"success"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
+	Error        string `json:"error,omitempty"`
 }
 
 type TokenLoginRequest struct {
-	JWTToken string `json:"token"`
+	AccessJWTToken string `json:"access_token"`
+}
+
+type RenewTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type RenewTokenResponse struct {
+	AccessToken string `json:"access_token"`
 }
 
 type CredentialsLoginRequest struct {
@@ -40,4 +49,14 @@ type UserIDChangeRequest struct {
 type ModificationResponse struct {
 	Success bool   `json:"success"`
 	Error   string `json:"error,omitempty"`
+}
+
+type LogoutRequest struct {
+	Id          string `json:"id"`
+	AccessToken string `json:"token"`
+}
+
+type LogoutResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
 }

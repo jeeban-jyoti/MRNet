@@ -74,12 +74,13 @@ func (x *UserLoginDetails) GetPasswordHash() string {
 }
 
 type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LoginSuccess  bool                   `protobuf:"varint,1,opt,name=loginSuccess,proto3" json:"loginSuccess,omitempty"`
-	JwtToken      string                 `protobuf:"bytes,2,opt,name=jwtToken,proto3" json:"jwtToken,omitempty"`
-	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	LoginSuccess    bool                   `protobuf:"varint,1,opt,name=loginSuccess,proto3" json:"loginSuccess,omitempty"`
+	RefreshJwtToken string                 `protobuf:"bytes,2,opt,name=refreshJwtToken,proto3" json:"refreshJwtToken,omitempty"`
+	AccessJwtToken  string                 `protobuf:"bytes,3,opt,name=accessJwtToken,proto3" json:"accessJwtToken,omitempty"`
+	Error           string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
@@ -119,9 +120,16 @@ func (x *LoginResponse) GetLoginSuccess() bool {
 	return false
 }
 
-func (x *LoginResponse) GetJwtToken() string {
+func (x *LoginResponse) GetRefreshJwtToken() string {
 	if x != nil {
-		return x.JwtToken
+		return x.RefreshJwtToken
+	}
+	return ""
+}
+
+func (x *LoginResponse) GetAccessJwtToken() string {
+	if x != nil {
+		return x.AccessJwtToken
 	}
 	return ""
 }
@@ -134,10 +142,10 @@ func (x *LoginResponse) GetError() string {
 }
 
 type JWTToken struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	JwtToken      string                 `protobuf:"bytes,1,opt,name=jwtToken,proto3" json:"jwtToken,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AccessJwtToken string                 `protobuf:"bytes,1,opt,name=accessJwtToken,proto3" json:"accessJwtToken,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *JWTToken) Reset() {
@@ -170,9 +178,9 @@ func (*JWTToken) Descriptor() ([]byte, []int) {
 	return file_authentication_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *JWTToken) GetJwtToken() string {
+func (x *JWTToken) GetAccessJwtToken() string {
 	if x != nil {
-		return x.JwtToken
+		return x.AccessJwtToken
 	}
 	return ""
 }
@@ -453,6 +461,154 @@ func (x *ModificationResponse) GetError() string {
 	return ""
 }
 
+type RenewJWTToken struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refreshToken,proto3" json:"refreshToken,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenewJWTToken) Reset() {
+	*x = RenewJWTToken{}
+	mi := &file_authentication_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenewJWTToken) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenewJWTToken) ProtoMessage() {}
+
+func (x *RenewJWTToken) ProtoReflect() protoreflect.Message {
+	mi := &file_authentication_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenewJWTToken.ProtoReflect.Descriptor instead.
+func (*RenewJWTToken) Descriptor() ([]byte, []int) {
+	return file_authentication_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RenewJWTToken) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+type LogoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AccessToken   string                 `protobuf:"bytes,2,opt,name=accessToken,proto3" json:"accessToken,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutRequest) Reset() {
+	*x = LogoutRequest{}
+	mi := &file_authentication_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutRequest) ProtoMessage() {}
+
+func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_authentication_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
+func (*LogoutRequest) Descriptor() ([]byte, []int) {
+	return file_authentication_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *LogoutRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *LogoutRequest) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+type LogoutResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutResponse) Reset() {
+	*x = LogoutResponse{}
+	mi := &file_authentication_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutResponse) ProtoMessage() {}
+
+func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_authentication_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
+func (*LogoutResponse) Descriptor() ([]byte, []int) {
+	return file_authentication_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LogoutResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *LogoutResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_authentication_proto protoreflect.FileDescriptor
 
 const file_authentication_proto_rawDesc = "" +
@@ -460,13 +616,14 @@ const file_authentication_proto_rawDesc = "" +
 	"\x14authentication.proto\x12\bmrnet.v1\"F\n" +
 	"\x10UserLoginDetails\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
-	"\fpasswordHash\x18\x02 \x01(\tR\fpasswordHash\"e\n" +
+	"\fpasswordHash\x18\x02 \x01(\tR\fpasswordHash\"\x9b\x01\n" +
 	"\rLoginResponse\x12\"\n" +
-	"\floginSuccess\x18\x01 \x01(\bR\floginSuccess\x12\x1a\n" +
-	"\bjwtToken\x18\x02 \x01(\tR\bjwtToken\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"&\n" +
-	"\bJWTToken\x12\x1a\n" +
-	"\bjwtToken\x18\x01 \x01(\tR\bjwtToken\"]\n" +
+	"\floginSuccess\x18\x01 \x01(\bR\floginSuccess\x12(\n" +
+	"\x0frefreshJwtToken\x18\x02 \x01(\tR\x0frefreshJwtToken\x12&\n" +
+	"\x0eaccessJwtToken\x18\x03 \x01(\tR\x0eaccessJwtToken\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"2\n" +
+	"\bJWTToken\x12&\n" +
+	"\x0eaccessJwtToken\x18\x01 \x01(\tR\x0eaccessJwtToken\"]\n" +
 	"\x11UserSignupDetails\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\"\n" +
@@ -485,10 +642,21 @@ const file_authentication_proto_rawDesc = "" +
 	"\fpasswordHash\x18\x03 \x01(\tR\fpasswordHash\"F\n" +
 	"\x14ModificationResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error2\x9a\x01\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error\"3\n" +
+	"\rRenewJWTToken\x12\"\n" +
+	"\frefreshToken\x18\x01 \x01(\tR\frefreshToken\"A\n" +
+	"\rLogoutRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12 \n" +
+	"\vaccessToken\x18\x02 \x01(\tR\vaccessToken\"@\n" +
+	"\x0eLogoutResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error2\xdb\x01\n" +
 	"\fLoginService\x12K\n" +
 	"\x14LoginWithCredentials\x12\x1a.mrnet.v1.UserLoginDetails\x1a\x17.mrnet.v1.LoginResponse\x12=\n" +
-	"\x0eLoginWithToken\x12\x12.mrnet.v1.JWTToken\x1a\x17.mrnet.v1.LoginResponse2O\n" +
+	"\x0eLoginWithToken\x12\x12.mrnet.v1.JWTToken\x1a\x17.mrnet.v1.LoginResponse\x12?\n" +
+	"\x10RenewAccessToken\x12\x17.mrnet.v1.RenewJWTToken\x1a\x12.mrnet.v1.JWTToken2[\n" +
+	"\rLogoutService\x12J\n" +
+	"\x15LogoutWithAccessToken\x12\x17.mrnet.v1.LogoutRequest\x1a\x18.mrnet.v1.LogoutResponse2O\n" +
 	"\rSignupService\x12>\n" +
 	"\x06Signup\x12\x1b.mrnet.v1.UserSignupDetails\x1a\x17.mrnet.v1.LoginResponse2\x96\x02\n" +
 	"\x13ModificationService\x12_\n" +
@@ -508,7 +676,7 @@ func file_authentication_proto_rawDescGZIP() []byte {
 	return file_authentication_proto_rawDescData
 }
 
-var file_authentication_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_authentication_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_authentication_proto_goTypes = []any{
 	(*UserLoginDetails)(nil),             // 0: mrnet.v1.UserLoginDetails
 	(*LoginResponse)(nil),                // 1: mrnet.v1.LoginResponse
@@ -518,25 +686,32 @@ var file_authentication_proto_goTypes = []any{
 	(*PasswordResetRequest)(nil),         // 5: mrnet.v1.PasswordResetRequest
 	(*UserIdResetRequest)(nil),           // 6: mrnet.v1.UserIdResetRequest
 	(*ModificationResponse)(nil),         // 7: mrnet.v1.ModificationResponse
+	(*RenewJWTToken)(nil),                // 8: mrnet.v1.RenewJWTToken
+	(*LogoutRequest)(nil),                // 9: mrnet.v1.LogoutRequest
+	(*LogoutResponse)(nil),               // 10: mrnet.v1.LogoutResponse
 }
 var file_authentication_proto_depIdxs = []int32{
-	0, // 0: mrnet.v1.LoginService.LoginWithCredentials:input_type -> mrnet.v1.UserLoginDetails
-	2, // 1: mrnet.v1.LoginService.LoginWithToken:input_type -> mrnet.v1.JWTToken
-	3, // 2: mrnet.v1.SignupService.Signup:input_type -> mrnet.v1.UserSignupDetails
-	4, // 3: mrnet.v1.ModificationService.RequestChangePassword:input_type -> mrnet.v1.RequestChangePasswordRequest
-	5, // 4: mrnet.v1.ModificationService.ChangePassword:input_type -> mrnet.v1.PasswordResetRequest
-	6, // 5: mrnet.v1.ModificationService.ChangeUserId:input_type -> mrnet.v1.UserIdResetRequest
-	1, // 6: mrnet.v1.LoginService.LoginWithCredentials:output_type -> mrnet.v1.LoginResponse
-	1, // 7: mrnet.v1.LoginService.LoginWithToken:output_type -> mrnet.v1.LoginResponse
-	1, // 8: mrnet.v1.SignupService.Signup:output_type -> mrnet.v1.LoginResponse
-	7, // 9: mrnet.v1.ModificationService.RequestChangePassword:output_type -> mrnet.v1.ModificationResponse
-	7, // 10: mrnet.v1.ModificationService.ChangePassword:output_type -> mrnet.v1.ModificationResponse
-	7, // 11: mrnet.v1.ModificationService.ChangeUserId:output_type -> mrnet.v1.ModificationResponse
-	6, // [6:12] is the sub-list for method output_type
-	0, // [0:6] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: mrnet.v1.LoginService.LoginWithCredentials:input_type -> mrnet.v1.UserLoginDetails
+	2,  // 1: mrnet.v1.LoginService.LoginWithToken:input_type -> mrnet.v1.JWTToken
+	8,  // 2: mrnet.v1.LoginService.RenewAccessToken:input_type -> mrnet.v1.RenewJWTToken
+	9,  // 3: mrnet.v1.LogoutService.LogoutWithAccessToken:input_type -> mrnet.v1.LogoutRequest
+	3,  // 4: mrnet.v1.SignupService.Signup:input_type -> mrnet.v1.UserSignupDetails
+	4,  // 5: mrnet.v1.ModificationService.RequestChangePassword:input_type -> mrnet.v1.RequestChangePasswordRequest
+	5,  // 6: mrnet.v1.ModificationService.ChangePassword:input_type -> mrnet.v1.PasswordResetRequest
+	6,  // 7: mrnet.v1.ModificationService.ChangeUserId:input_type -> mrnet.v1.UserIdResetRequest
+	1,  // 8: mrnet.v1.LoginService.LoginWithCredentials:output_type -> mrnet.v1.LoginResponse
+	1,  // 9: mrnet.v1.LoginService.LoginWithToken:output_type -> mrnet.v1.LoginResponse
+	2,  // 10: mrnet.v1.LoginService.RenewAccessToken:output_type -> mrnet.v1.JWTToken
+	10, // 11: mrnet.v1.LogoutService.LogoutWithAccessToken:output_type -> mrnet.v1.LogoutResponse
+	1,  // 12: mrnet.v1.SignupService.Signup:output_type -> mrnet.v1.LoginResponse
+	7,  // 13: mrnet.v1.ModificationService.RequestChangePassword:output_type -> mrnet.v1.ModificationResponse
+	7,  // 14: mrnet.v1.ModificationService.ChangePassword:output_type -> mrnet.v1.ModificationResponse
+	7,  // 15: mrnet.v1.ModificationService.ChangeUserId:output_type -> mrnet.v1.ModificationResponse
+	8,  // [8:16] is the sub-list for method output_type
+	0,  // [0:8] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_authentication_proto_init() }
@@ -550,9 +725,9 @@ func file_authentication_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_authentication_proto_rawDesc), len(file_authentication_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   11,
 			NumExtensions: 0,
-			NumServices:   3,
+			NumServices:   4,
 		},
 		GoTypes:           file_authentication_proto_goTypes,
 		DependencyIndexes: file_authentication_proto_depIdxs,
