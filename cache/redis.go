@@ -20,27 +20,35 @@ func CloseRedis() {
 	RDB.Close()
 }
 
-func SetIdToDetailsForAuthInCache(id string, passwordHash string, refreshToken string) error {
-	return RDB.HSet(
+func SetIdToDetailsForAuthInCache(id, passwordHash, refreshToken string) error {
+	err := RDB.HSet(
 		Ctx,
 		id,
 		"passwordHash", passwordHash,
 		"refreshToken", refreshToken,
-		time.Hour,
 	).Err()
+	if err != nil {
+		return err
+	}
+
+	return RDB.Expire(Ctx, id, time.Hour).Err()
 }
 
 func GetIdToDetailsForAuthInCache(id string) (map[string]string, error) {
 	return RDB.HGetAll(Ctx, id).Result()
 }
 
-func UpdateIdToDetailsForAuthInCache(id string, passwordHash string) error {
-	return RDB.HSet(
+func UpdateIdToDetailsForAuthInCache(id, passwordHash string) error {
+	err := RDB.HSet(
 		Ctx,
 		id,
 		"passwordHash", passwordHash,
-		time.Hour,
 	).Err()
+	if err != nil {
+		return err
+	}
+
+	return RDB.Expire(Ctx, id, time.Hour).Err()
 }
 
 func DelDataFromCache(id string) (any, error) {

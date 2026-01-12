@@ -3,7 +3,7 @@ package models
 type SignupRequest struct {
 	Email        string `json:"email"`
 	Id           string `json:"id"`
-	PasswordHash string `json:"password"`
+	PasswordHash string `json:"passwordHash"`
 }
 
 type LoggedInResponse struct {
@@ -27,7 +27,7 @@ type RenewTokenResponse struct {
 
 type CredentialsLoginRequest struct {
 	Id           string `json:"id"`
-	PasswordHash string `json:"password"`
+	PasswordHash string `json:"passwordHash"`
 }
 
 type RequestPasswordChangeRequest struct {
@@ -53,7 +53,7 @@ type ModificationResponse struct {
 
 type LogoutRequest struct {
 	Id          string `json:"id"`
-	AccessToken string `json:"token"`
+	AccessToken string `json:"access_token"`
 }
 
 type LogoutResponse struct {

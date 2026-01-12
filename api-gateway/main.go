@@ -35,6 +35,7 @@ func main() {
 		signupClient:       authenticationpb.NewSignupServiceClient(conn),
 		loginClient:        authenticationpb.NewLoginServiceClient(conn),
 		modificationClient: authenticationpb.NewModificationServiceClient(conn),
+		logoutClient:       authenticationpb.NewLogoutServiceClient(conn),
 	}
 
 	http.HandleFunc("/signup", gateway.signupHandler)

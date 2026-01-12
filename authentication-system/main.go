@@ -33,6 +33,8 @@ func GenerateRefreshJWT(userID string) (string, error) {
 		"exp": time.Now().Add(720 * time.Hour).Unix(),
 	}
 
+	log.Println("claims: ", claims)
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
 }
@@ -50,7 +52,7 @@ func GenerateAccessJWT(userID string) (string, error) {
 
 func ValidateJWT(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if token.Method != jwt.SigningMethodHS256 {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
 		return jwtSecret, nil
@@ -65,12 +67,14 @@ func ValidateJWT(tokenString string) (string, error) {
 		return "", errors.New("invalid token")
 	}
 
-	userID, ok := claims["sub"].(string)
-	if !ok || userID == "" {
-		return "", errors.New("invalid subject")
+	// log.Println(claims)
+
+	sub, ok := claims["sub"].(string)
+	if !ok || sub == "" {
+		return "", errors.New("subject missing in token")
 	}
 
-	return userID, nil
+	return sub, nil
 }
 
 func Generate6DigitOTP() (string, error) {
@@ -153,7 +157,7 @@ func (s *SignupServer) Signup(
 	req *authenticationpb.UserSignupDetails,
 ) (*authenticationpb.LoginResponse, error) {
 
-	log.Println("Signup:", req.Email, req.Id)
+	log.Println("Signup:", req.Email, req.Id, req.PasswordHash)
 
 	if req.Email == "" || req.PasswordHash == "" || req.Id == "" {
 		return &authenticationpb.LoginResponse{
@@ -164,14 +168,14 @@ func (s *SignupServer) Signup(
 
 	var user models.SignupRequest
 
-	refreshJwt, refreshJwtErr := GenerateRefreshJWT(user.Id)
+	refreshJwt, refreshJwtErr := GenerateRefreshJWT(req.Id)
 	if refreshJwtErr != nil {
-		log.Fatal("failed to generate jwt!")
+		log.Fatal("failed to generate refresh jwt")
 	}
 
-	accessJwt, accessJwtErr := GenerateAccessJWT(user.Id)
+	accessJwt, accessJwtErr := GenerateAccessJWT(req.Id)
 	if accessJwtErr != nil {
-		log.Fatal("failed to generate jwt!")
+		log.Fatal("failed to generate access jwt")
 	}
 
 	query := "insert into user_authentication (id, email, password_hash, refresh_token) values ($1, $2, $3, $4) returning id, email, password_hash"
@@ -190,7 +194,7 @@ func (s *SignupServer) Signup(
 
 	cachingErr := cache.SetIdToDetailsForAuthInCache(req.Id, req.PasswordHash, refreshJwt)
 	if cachingErr != nil {
-		log.Println(err)
+		log.Println("err: ", err)
 	}
 
 	return &authenticationpb.LoginResponse{
@@ -226,8 +230,8 @@ func (l *LoginServer) LoginWithCredentials(
 	var refreshJwt string
 
 	storedDataFromId, cacheError := cache.GetIdToDetailsForAuthInCache(req.Id)
-	if cacheError != nil {
-		query := "select id, password_hash, refresh_token from users where id=$1"
+	if cacheError != nil || len(storedDataFromId) == 0 {
+		query := "select id, password_hash, refresh_token from user_authentication where id=$1"
 		err := db.Pool.QueryRow(
 			cache.Ctx,
 			query,
@@ -237,11 +241,13 @@ func (l *LoginServer) LoginWithCredentials(
 		if err != nil {
 			return nil, err
 		}
+		log.Println("dbfetch: ", user, refreshJwt)
 	} else {
 		user.PasswordHash = storedDataFromId["passwordHash"]
 		refreshJwt = storedDataFromId["refreshToken"]
 	}
-
+	log.Println(user)
+	log.Println(user.PasswordHash, req.PasswordHash)
 	if user.PasswordHash != req.PasswordHash {
 		return nil, errors.New("Password did not match!")
 	}
@@ -280,7 +286,7 @@ func (l *LoginServer) LoginWithToken(
 
 	var user models.CredentialsLoginRequest
 
-	query := "select id from users where id=$1"
+	query := "select id from user_authentication where id=$1"
 	dbErr := db.Pool.QueryRow(
 		cache.Ctx,
 		query,
@@ -301,7 +307,7 @@ func (l *LoginServer) RenewAccessToken(
 	req *authenticationpb.RenewJWTToken,
 ) (*authenticationpb.JWTToken, error) {
 
-	log.Println("Login with token")
+	// log.Println("Renew token")
 
 	if req.RefreshToken == "" {
 		return nil, errors.New("Empty token field")
@@ -310,12 +316,13 @@ func (l *LoginServer) RenewAccessToken(
 	userid, err := ValidateJWT(req.RefreshToken)
 
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	var refreshToken pgtype.Text
 
-	query := "select refresh_token from users where id=$1"
+	query := "select refresh_token from user_authentication where id=$1"
 	dbErr := db.Pool.QueryRow(
 		cache.Ctx,
 		query,
@@ -368,7 +375,7 @@ func (m *ModificationServer) RequestChangePassword(
 
 	cmdTag, err := db.Pool.Exec(
 		cache.Ctx,
-		"select email from users where email=$1",
+		"select email from user_authentication where email=$1",
 		req.Email,
 	)
 
@@ -424,7 +431,7 @@ func (m *ModificationServer) ChangePassword(
 	}
 
 	updateQuery := `
-		UPDATE users
+		UPDATE user_authentication
 		SET password_hash = $1
 		WHERE email = $2
 		RETURNING id
@@ -478,7 +485,7 @@ func (m *ModificationServer) ChangeUserId(
 
 	var user models.UserIDChangeRequest
 
-	query := "select password_hash from users where id=$1"
+	query := "select password_hash from user_authentication where id=$1"
 	err := db.Pool.QueryRow(
 		cache.Ctx,
 		query,
@@ -492,7 +499,7 @@ func (m *ModificationServer) ChangeUserId(
 		return nil, errors.New("Password did not match!")
 	}
 
-	updateQuery := "update users set id = $1 where id=$2"
+	updateQuery := "update user_authentication set id = $1 where id=$2"
 	cmdTag, updateErr := db.Pool.Exec(
 		cache.Ctx,
 		updateQuery,
@@ -500,6 +507,7 @@ func (m *ModificationServer) ChangeUserId(
 		req.OldId,
 	)
 
+	log.Println("skdjfkjsnfkjb")
 	if updateErr != nil {
 		return nil, updateErr
 	}
@@ -513,7 +521,7 @@ func (m *ModificationServer) ChangeUserId(
 
 	storedDataInCache, cacheErr1 := cache.GetIdToDetailsForAuthInCache(req.OldId)
 	if cacheErr1 != nil {
-		log.Fatal("Inconsistent Cache!")
+		log.Println("Inconsistent Cache! - 1")
 		return &authenticationpb.ModificationResponse{
 			Success: true,
 			Error:   "inconsistent cache",
@@ -522,7 +530,7 @@ func (m *ModificationServer) ChangeUserId(
 
 	_, cacheErr2 := cache.DelDataFromCache(req.OldId)
 	if cacheErr2 != nil {
-		log.Fatal("Inconsistent Cache!")
+		log.Println("Inconsistent Cache! - 2")
 		return &authenticationpb.ModificationResponse{
 			Success: true,
 			Error:   "inconsistent cache",
@@ -531,7 +539,7 @@ func (m *ModificationServer) ChangeUserId(
 
 	cacheErr3 := cache.SetIdToDetailsForAuthInCache(req.NewId, storedDataInCache["passwordHash"], storedDataInCache["refreshToken"])
 	if cacheErr3 != nil {
-		log.Fatal("Inconsistent Cache!")
+		log.Println("Inconsistent Cache!")
 		return &authenticationpb.ModificationResponse{
 			Success: true,
 			Error:   "inconsistent cache",
@@ -548,15 +556,15 @@ func (m *ModificationServer) ChangeUserId(
 // ----- Logout Services -----
 
 type LogoutServer struct {
-	authenticationpb.UnimplementedModificationServiceServer
+	authenticationpb.UnimplementedLogoutServiceServer
 }
 
-func (m *LogoutServer) Logout(
+func (m *LogoutServer) LogoutWithAccessToken(
 	ctx context.Context,
 	req *authenticationpb.LogoutRequest,
 ) (*authenticationpb.LogoutResponse, error) {
 
-	log.Println("Password change:", req.Id)
+	log.Println("Password change:", req.Id, "token: ", req.AccessToken)
 
 	if req.AccessToken == "" || req.Id == "" {
 		return &authenticationpb.LogoutResponse{
@@ -619,6 +627,9 @@ func main() {
 	)
 	authenticationpb.RegisterModificationServiceServer(
 		grpcServer, &ModificationServer{},
+	)
+	authenticationpb.RegisterLogoutServiceServer(
+		grpcServer, &LogoutServer{},
 	)
 
 	log.Println("Auth gRPC Server running on :50051")
