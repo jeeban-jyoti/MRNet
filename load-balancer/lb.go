@@ -40,11 +40,11 @@ type loadBalancer struct {
 	heap  *Heap
 }
 
-func InitLoadBalancer() loadBalancer {
+func LoadBalancer() loadBalancer {
 	return loadBalancer{sync.Mutex{}, &Heap{}}
 }
 
-func (lb *loadBalancer) addConnAddr(addr string, connCount uint) error {
+func (lb *loadBalancer) AddConnAddr(addr string, connCount uint) error {
 	conn, err := grpc.NewClient(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()), // TLS in prod
@@ -56,7 +56,7 @@ func (lb *loadBalancer) addConnAddr(addr string, connCount uint) error {
 	return nil
 }
 
-func (lb *loadBalancer) removeConnAddr(addr string) {
+func (lb *loadBalancer) RemoveConnAddr(addr string) {
 	var tmp Heap
 	for len(*lb.heap) > 0 {
 		currTmp := lb.heap.Pop()
@@ -84,7 +84,7 @@ func (lb *loadBalancer) pickConnection() (*grpc.ClientConn, error) {
 	return outConn.conn, nil
 }
 
-func (lb *loadBalancer) loadHandler(srv interface{}, stream grpc.ServerStream) error {
+func (lb *loadBalancer) LoadHandler(srv interface{}, stream grpc.ServerStream) error {
 	ctx := stream.Context()
 
 	method, ok := grpc.MethodFromServerStream(stream)

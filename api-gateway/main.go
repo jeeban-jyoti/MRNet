@@ -47,6 +47,8 @@ func main() {
 	http.HandleFunc("/renew-access-token", gateway.renewAccessTokenHandler)
 	http.HandleFunc("/logout", gateway.logoutHandler)
 
+	http.HandleFunc("/metadaata", gateway.metaDataHandler)
+
 	log.Println("API Gateway running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -290,6 +292,39 @@ func (g *Gateway) renewAccessTokenHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (g *Gateway) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req models.LogoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	resp, err := g.logoutClient.LogoutWithAccessToken(ctx, &authenticationpb.LogoutRequest{
+		Id:          req.Id,
+		AccessToken: req.AccessToken,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	out := models.LogoutResponse{
+		Success: resp.Success,
+		Error:   resp.Error,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
+func (g *Gateway) metaDataHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
