@@ -3,61 +3,44 @@ package hashing
 import (
 	"context"
 	"errors"
-	"fmt"
-	"net/http"
+	"time"
 
-	"mrnet/internal/httpx"
+	"google.golang.org/grpc/codes"
+
+	"mrnet/api/authv1"
+	"mrnet/internal/grpcx"
 )
 
 // ErrBusy means the hasher pool shed the request (its queue deadline passed).
 var ErrBusy = errors.New("hasher busy")
 
+// Client calls the hasher pool over gRPC.
 type Client struct {
-	URL string
-	C   *httpx.Client
+	C       authv1.HasherClient
+	Timeout time.Duration
 }
 
-type HashReq struct {
-	Password string `json:"password"`
-}
-type HashResp struct {
-	Hash string `json:"hash"`
-}
-type VerifyReq struct {
-	Password string `json:"password"`
-	Hash     string `json:"hash"` // empty: verify against a dummy hash, to keep timing equal
-}
-type VerifyResp struct {
-	OK          bool `json:"ok"`
-	NeedsRehash bool `json:"needs_rehash"`
+func busy(err error) error {
+	if grpcx.Code(err) == codes.ResourceExhausted {
+		return ErrBusy
+	}
+	return err
 }
 
 func (c *Client) Hash(ctx context.Context, password string) (string, error) {
-	var out HashResp
-	st, eb, err := c.C.PostJSON(ctx, c.URL+"/hash", HashReq{Password: password}, &out)
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+	res, err := c.C.Hash(ctx, &authv1.HashRequest{Password: password})
 	if err != nil {
-		return "", err
+		return "", busy(err)
 	}
-	if st == http.StatusTooManyRequests {
-		return "", ErrBusy
-	}
-	if eb != nil {
-		return "", fmt.Errorf("hasher: %d %s", st, eb.Error)
-	}
-	return out.Hash, nil
+	return res.Hash, nil
 }
 
-func (c *Client) Verify(ctx context.Context, password, hash string) (VerifyResp, error) {
-	var out VerifyResp
-	st, eb, err := c.C.PostJSON(ctx, c.URL+"/verify", VerifyReq{Password: password, Hash: hash}, &out)
-	if err != nil {
-		return out, err
-	}
-	if st == http.StatusTooManyRequests {
-		return out, ErrBusy
-	}
-	if eb != nil {
-		return out, fmt.Errorf("hasher: %d %s", st, eb.Error)
-	}
-	return out, nil
+// Verify checks password against hash; an empty hash runs against a dummy.
+func (c *Client) Verify(ctx context.Context, password, hash string) (*authv1.VerifyResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+	res, err := c.C.Verify(ctx, &authv1.VerifyRequest{Password: password, Hash: hash})
+	return res, busy(err)
 }

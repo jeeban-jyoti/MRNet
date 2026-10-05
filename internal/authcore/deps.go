@@ -8,10 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/twmb/franz-go/pkg/kgo"
 
+	"mrnet/api/authv1"
 	"mrnet/internal/config"
 	"mrnet/internal/events"
+	"mrnet/internal/grpcx"
 	"mrnet/internal/hashing"
-	"mrnet/internal/httpx"
 	"mrnet/internal/infra"
 	"mrnet/internal/keys"
 	"mrnet/internal/kms"
@@ -33,9 +34,10 @@ type Deps struct {
 	Verifier *tokens.Verifier
 	Registry *registry.Registry
 
-	Peers          *httpx.Client     // cross-region internal calls
-	PeerToken      map[string]string // region -> token service base URL
-	PeerAccount    map[string]string // region -> account service base URL
+	// Cross-region gRPC clients, by region.
+	PeerSessions   map[string]authv1.SessionsClient
+	PeerAccounts   map[string]authv1.AccountsClient
+	PeerTimeout    time.Duration
 	InternalSecret string
 }
 
@@ -44,13 +46,30 @@ func Connect(ctx context.Context) (*Deps, error) {
 	accessTTL := config.Dur("ACCESS_TTL", 10*time.Minute)
 	internal := config.MustStr("INTERNAL_SECRET")
 	d := &Deps{
-		PeerToken:      config.Map("PEER_TOKEN_URLS"),
-		PeerAccount:    config.Map("PEER_ACCOUNT_URLS"),
 		InternalSecret: internal,
-		Peers:          httpx.NewClient(3*time.Second, internal),
-		Hasher:         &hashing.Client{URL: config.MustStr("HASHER_URL"), C: httpx.NewClient(5*time.Second, "")},
+		PeerSessions:   map[string]authv1.SessionsClient{},
+		PeerAccounts:   map[string]authv1.AccountsClient{},
+		PeerTimeout:    config.Dur("PEER_TIMEOUT", 3*time.Second),
 	}
-	var err error
+	hasherConn, err := grpcx.Dial(config.MustStr("HASHER_GRPC"), internal)
+	if err != nil {
+		return nil, err
+	}
+	d.Hasher = &hashing.Client{C: authv1.NewHasherClient(hasherConn), Timeout: 5 * time.Second}
+	for region, target := range config.Map("PEER_TOKEN_GRPC") {
+		conn, err := grpcx.Dial(target, internal)
+		if err != nil {
+			return nil, err
+		}
+		d.PeerSessions[region] = authv1.NewSessionsClient(conn)
+	}
+	for region, target := range config.Map("PEER_ACCOUNT_GRPC") {
+		conn, err := grpcx.Dial(target, internal)
+		if err != nil {
+			return nil, err
+		}
+		d.PeerAccounts[region] = authv1.NewAccountsClient(conn)
+	}
 	if d.Primary, err = infra.Postgres(ctx, config.MustStr("POSTGRES_PRIMARY_URL"), 20); err != nil {
 		return nil, err
 	}

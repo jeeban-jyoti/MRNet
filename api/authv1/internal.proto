@@ -1,0 +1,95 @@
+// Service-to-service API of the MRNet auth service. Clients talk to the
+// gateway over HTTPS/JSON; everything behind it talks gRPC.
+syntax = "proto3";
+
+package mrnet.auth.v1;
+
+option go_package = "mrnet/api/authv1;authv1";
+
+// Hasher runs Argon2id. RESOURCE_EXHAUSTED means the pool shed the request
+// because its queue deadline passed; callers answer their client with 429.
+service Hasher {
+  rpc Hash(HashRequest) returns (HashResponse);
+  rpc Verify(VerifyRequest) returns (VerifyResponse);
+}
+
+message HashRequest {
+  string password = 1;
+}
+
+message HashResponse {
+  string hash = 1; // PHC string
+}
+
+message VerifyRequest {
+  string password = 1;
+  // Empty: verify against a dummy hash so an unknown email costs the same time.
+  string hash = 2;
+}
+
+message VerifyResponse {
+  bool ok = 1;
+  bool needs_rehash = 2;
+}
+
+// Sessions is served by every region's token service. Another region calls
+// TakeSession to move a session to itself on the user's first renew there.
+service Sessions {
+  rpc TakeSession(TakeSessionRequest) returns (TakeSessionResponse);
+}
+
+message TakeSessionRequest {
+  string user_id = 1;
+  string session_id = 2;
+  string secret_hash = 3; // SHA-256 of the presented refresh secret
+}
+
+message TakeSessionResponse {
+  // ok, reused, missing or expired. Only ok carries the session fields.
+  string outcome = 1;
+  string device_id = 2;
+  string scope = 3;
+  int64 credential_version = 4;
+  int64 created_at_ms = 5;
+  int64 absolute_exp_ms = 6;
+}
+
+// Accounts is served by every region's account service; it answers only for
+// users homed in that region.
+service Accounts {
+  // For a signin elsewhere before the user's credentials were copied there.
+  // NOT_FOUND if the email is not homed here.
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (User);
+  // A password change forwarded to the home region. UNAUTHENTICATED for a
+  // wrong current password, ABORTED for a concurrent change,
+  // RESOURCE_EXHAUSTED when throttled, FAILED_PRECONDITION if not home.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+}
+
+message GetUserByEmailRequest {
+  string email_norm = 1;
+}
+
+message User {
+  string user_id = 1;
+  string email_norm = 2;
+  string password_hash = 3;
+  int64 credential_version = 4;
+  string status = 5;
+  string home_region = 6;
+  string display_name = 7;
+  int64 password_changed_at_ms = 8;
+  int64 created_at_ms = 9;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+message ChangePasswordResponse {
+  int64 credential_version = 1;
+  // Sessions created before this time are revoked in every region.
+  int64 revoked_before_ms = 2;
+}

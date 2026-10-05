@@ -12,9 +12,14 @@ import (
 
 	"github.com/google/uuid"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"mrnet/api/authv1"
 	"mrnet/internal/authcore"
 	"mrnet/internal/config"
 	"mrnet/internal/events"
+	"mrnet/internal/grpcx"
 	"mrnet/internal/hashing"
 	"mrnet/internal/httpx"
 	"mrnet/internal/password"
@@ -25,6 +30,7 @@ import (
 )
 
 type Server struct {
+	authv1.UnimplementedAccountsServer
 	*authcore.Deps
 	breach      *password.BreachChecker
 	signupPerIP int
@@ -50,9 +56,15 @@ func Run(ctx context.Context) error {
 	httpx.Health(mux, nil)
 	mux.HandleFunc("POST /v1/signup", s.signup)
 	mux.HandleFunc("POST /v1/password/change", s.passwordChange)
-	mux.HandleFunc("POST /internal/v1/users/by-email", httpx.RequireInternal(d.InternalSecret, s.byEmail))
-	mux.HandleFunc("POST /internal/v1/password/change", httpx.RequireInternal(d.InternalSecret, s.internalPasswordChange))
-	return httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: httpx.Logged("account", mux)}, "", "")
+
+	gs := grpcx.NewServer(d.InternalSecret)
+	authv1.RegisterAccountsServer(gs, s)
+	errc := make(chan error, 2)
+	go func() { errc <- grpcx.Serve(ctx, config.Str("GRPC_ADDR", ":9090"), gs) }()
+	go func() {
+		errc <- httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: httpx.Logged("account", mux)}, "", "")
+	}()
+	return <-errc
 }
 
 type signupReq struct {
@@ -150,16 +162,27 @@ type changeReq struct {
 	NewPassword     string `json:"new_password"`
 }
 
-// HomeChangeReq / HomeChangeResp forward a password change to the user's home region.
+// HomeChangeReq / HomeChangeResp are a password change as the home region runs it.
 type HomeChangeReq struct {
-	UserID          string `json:"user_id"`
-	CurrentPassword string `json:"current_password"`
-	NewPassword     string `json:"new_password"`
+	UserID          string
+	CurrentPassword string
+	NewPassword     string
 }
 
 type HomeChangeResp struct {
-	CredentialVersion int64 `json:"credential_version"`
-	RevokedBeforeMs   int64 `json:"revoked_before_ms"`
+	CredentialVersion int64
+	RevokedBeforeMs   int64
+}
+
+// HTTP status <-> gRPC code for errors crossing regions; the error code
+// string (wrong_password, ...) travels as the status message.
+var toGRPC = map[int]codes.Code{
+	http.StatusUnauthorized:        codes.Unauthenticated,
+	http.StatusTooManyRequests:     codes.ResourceExhausted,
+	http.StatusConflict:            codes.Aborted,
+	http.StatusMisdirectedRequest:  codes.FailedPrecondition,
+	http.StatusServiceUnavailable:  codes.Unavailable,
+	http.StatusUnprocessableEntity: codes.InvalidArgument,
 }
 
 func (s *Server) passwordChange(w http.ResponseWriter, r *http.Request) {
@@ -236,33 +259,37 @@ func (s *Server) homeOf(ctx context.Context, uid string) (string, error) {
 
 func (s *Server) forwardChange(ctx context.Context, home string, req HomeChangeReq) (HomeChangeResp, int, string) {
 	var res HomeChangeResp
-	base, ok := s.PeerAccount[home]
+	peer, ok := s.PeerAccounts[home]
 	if !ok {
 		return res, http.StatusServiceUnavailable, "home_region_unknown"
 	}
-	st, eb, err := s.Peers.PostJSON(ctx, base+"/internal/v1/password/change", req, &res)
+	ctx, cancel := context.WithTimeout(ctx, s.PeerTimeout)
+	defer cancel()
+	out, err := peer.ChangePassword(ctx, &authv1.ChangePasswordRequest{UserId: req.UserID, CurrentPassword: req.CurrentPassword, NewPassword: req.NewPassword})
 	if err != nil {
+		st := status.Convert(err)
+		for httpStatus, c := range toGRPC {
+			if c == st.Code() && c != codes.Unavailable {
+				return res, httpStatus, st.Message()
+			}
+		}
 		slog.Warn("password change forward failed", "home", home, "err", err)
 		return res, http.StatusServiceUnavailable, "home_region_unavailable"
 	}
-	if eb != nil {
-		return res, st, eb.Error
-	}
-	return res, st, ""
+	return HomeChangeResp{CredentialVersion: out.CredentialVersion, RevokedBeforeMs: out.RevokedBeforeMs}, http.StatusOK, ""
 }
 
-func (s *Server) internalPasswordChange(w http.ResponseWriter, r *http.Request) {
-	var req HomeChangeReq
-	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, http.StatusBadRequest, "bad_request", "")
-		return
+// ChangePassword is a password change forwarded here, the user's home region.
+func (s *Server) ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error) {
+	res, st, code := s.changeAtHome(ctx, HomeChangeReq{UserID: req.UserId, CurrentPassword: req.CurrentPassword, NewPassword: req.NewPassword})
+	if st != http.StatusOK {
+		c, ok := toGRPC[st]
+		if !ok {
+			c = codes.Internal
+		}
+		return nil, status.Error(c, code)
 	}
-	res, status, code := s.changeAtHome(r.Context(), req)
-	if status != http.StatusOK {
-		httpx.Error(w, status, code, "")
-		return
-	}
-	httpx.JSON(w, http.StatusOK, res)
+	return &authv1.ChangePasswordResponse{CredentialVersion: res.CredentialVersion, RevokedBeforeMs: res.RevokedBeforeMs}, nil
 }
 
 // changeAtHome runs in the user's home region, the only one that writes the account.
@@ -286,7 +313,7 @@ func (s *Server) changeAtHome(ctx context.Context, req HomeChangeReq) (HomeChang
 	if err != nil {
 		return res, http.StatusServiceUnavailable, "unavailable"
 	}
-	if !v.OK {
+	if !v.Ok {
 		s.Limiter.AccountFailed(ctx, acct)
 		return res, http.StatusUnauthorized, "wrong_password"
 	}
@@ -309,22 +336,15 @@ func (s *Server) changeAtHome(ctx context.Context, req HomeChangeReq) (HomeChang
 	return HomeChangeResp{CredentialVersion: nu.CredentialVersion, RevokedBeforeMs: before}, http.StatusOK, ""
 }
 
-func (s *Server) byEmail(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Email string `json:"email"`
-	}
-	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, http.StatusBadRequest, "bad_request", "")
-		return
-	}
-	u, err := users.ByEmail(r.Context(), s.Primary, req.Email)
+// GetUserByEmail serves another region's signin for a user homed here
+// whose credentials have not been copied there yet.
+func (s *Server) GetUserByEmail(ctx context.Context, req *authv1.GetUserByEmailRequest) (*authv1.User, error) {
+	u, err := users.ByEmail(ctx, s.Primary, req.EmailNorm)
 	if errors.Is(err, users.ErrNotFound) || (err == nil && u.HomeRegion != s.Core.Region) {
-		httpx.Error(w, http.StatusNotFound, "not_found", "")
-		return
+		return nil, status.Error(codes.NotFound, "not homed here")
 	}
 	if err != nil {
-		httpx.Error(w, http.StatusServiceUnavailable, "unavailable", "")
-		return
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
-	httpx.JSON(w, http.StatusOK, u)
+	return users.ToProto(u), nil
 }

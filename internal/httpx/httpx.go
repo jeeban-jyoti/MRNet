@@ -2,7 +2,6 @@
 package httpx
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -17,8 +16,6 @@ import (
 	"syscall"
 	"time"
 )
-
-const InternalHeader = "X-Internal-Token"
 
 func JSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -64,70 +61,6 @@ func ClientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
-}
-
-// RequireInternal guards service-to-service endpoints with a shared secret,
-// standing in for the mTLS a real deployment would use.
-func RequireInternal(secret string, next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if secret == "" || r.Header.Get(InternalHeader) != secret {
-			Error(w, http.StatusForbidden, "forbidden", "")
-			return
-		}
-		next(w, r)
-	}
-}
-
-// Client calls other services with JSON bodies.
-type Client struct {
-	HTTP     *http.Client
-	Internal string
-}
-
-func NewClient(timeout time.Duration, internalSecret string) *Client {
-	return &Client{
-		HTTP: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				MaxIdleConnsPerHost: 256,
-				IdleConnTimeout:     90 * time.Second,
-			},
-		},
-		Internal: internalSecret,
-	}
-}
-
-// PostJSON sends in and decodes the response into out when the status is 2xx,
-// or into an ErrorBody otherwise. It returns the HTTP status.
-func (c *Client) PostJSON(ctx context.Context, url string, in, out any) (int, *ErrorBody, error) {
-	body, err := json.Marshal(in)
-	if err != nil {
-		return 0, nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return 0, nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if c.Internal != "" {
-		req.Header.Set(InternalHeader, c.Internal)
-	}
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return 0, nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		var eb ErrorBody
-		_ = json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&eb)
-		return resp.StatusCode, &eb, nil
-	}
-	if out != nil && resp.StatusCode != http.StatusNoContent {
-		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-			return resp.StatusCode, nil, err
-		}
-	}
-	return resp.StatusCode, nil, nil
 }
 
 // Health adds /healthz (process up) and /readyz (ready() returns true).

@@ -49,6 +49,13 @@ All JSON over HTTPS. Every token-issuing call returns
 
 One Go module, one binary (`cmd/mrnet`), one image; the first argument picks the component.
 
+Clients reach the gateway over HTTPS/JSON. Everything behind it calls each
+other over gRPC (port 9090), defined in `api/authv1/internal.proto`:
+`Hasher` (Hash, Verify), `Sessions` (TakeSession, for moving a session between
+regions) and `Accounts` (GetUserByEmail and ChangePassword, served by the
+user's home region). Port 8080 on each service carries its public HTTP
+endpoints and health checks. Regenerate the Go code with `make proto`.
+
 | Component | Package | Role in the design |
 |---|---|---|
 | gateway | `internal/svc/gateway` | TLS 1.3 + HTTP/2, per-IP rate limit, routes by path (Envoy's job in production) |
@@ -101,7 +108,8 @@ These are deliberate simplifications for one laptop:
 - **Scale**: one instance of each service per region, 3+3 Redis nodes instead
   of 12+12, one Kafka broker instead of 6. Add replicas with
   `docker compose -f deploy/compose.yaml up -d --scale eu1-validator=3`.
-- **Service-to-service auth** uses a shared secret header instead of mTLS.
+- **Service-to-service auth** is a shared secret in gRPC metadata instead of mTLS.
+- **Per-IP limits** are raised in the local stack, because every test client shares one IP.
 
 ## Benchmarks (Apple M-series laptop, 10 cores)
 

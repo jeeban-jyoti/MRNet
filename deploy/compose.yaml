@@ -455,6 +455,7 @@
         "ACCESS_TTL": "${ACCESS_TTL:-10m}",
         "LOG_LEVEL": "${LOG_LEVEL:-info}",
         "HASH_PEPPER": "${HASH_PEPPER}",
+        "INTERNAL_SECRET": "${INTERNAL_SECRET}",
         "HASHER_WORKERS": "${HASHER_WORKERS:-4}"
       },
       "networks": [
@@ -491,14 +492,16 @@
         "REDIS_RL_ADDR": "ap1-redis-rl:6379",
         "KAFKA_BROKERS": "ap1-kafka:9092",
         "REGISTRY_URL": "postgresql://root@crdb-1:26257,crdb-2:26257,crdb-3:26257/defaultdb?sslmode=disable",
-        "HASHER_URL": "http://ap1-hasher:8080",
+        "HASHER_GRPC": "ap1-hasher:9090",
         "JWKS_URLS": "http://ap1-token:8080/.well-known/jwks.json,http://eu1-token:8080/.well-known/jwks.json",
         "KMS_MASTER_KEY": "${AP1_KMS_MASTER_KEY}",
         "ROTATION_KEY": "${AP1_ROTATION_KEY}",
         "INTERNAL_SECRET": "${INTERNAL_SECRET}",
-        "PEER_TOKEN_URLS": "eu1=http://eu1-token:8080",
-        "PEER_ACCOUNT_URLS": "eu1=http://eu1-account:8080",
-        "BREACH_RANGE_URL": "http://ap1-hasher:8080/range/"
+        "PEER_TOKEN_GRPC": "eu1=eu1-token:9090",
+        "PEER_ACCOUNT_GRPC": "eu1=eu1-account:9090",
+        "BREACH_RANGE_URL": "http://ap1-hasher:8080/range/",
+        "SIGNUP_PER_IP_PER_MIN": "${SIGNUP_PER_IP_PER_MIN:-600}",
+        "SIGNIN_PER_IP_PER_MIN": "${SIGNIN_PER_IP_PER_MIN:-1200}"
       },
       "networks": [
         "ap1",
@@ -557,14 +560,16 @@
         "REDIS_RL_ADDR": "ap1-redis-rl:6379",
         "KAFKA_BROKERS": "ap1-kafka:9092",
         "REGISTRY_URL": "postgresql://root@crdb-1:26257,crdb-2:26257,crdb-3:26257/defaultdb?sslmode=disable",
-        "HASHER_URL": "http://ap1-hasher:8080",
+        "HASHER_GRPC": "ap1-hasher:9090",
         "JWKS_URLS": "http://ap1-token:8080/.well-known/jwks.json,http://eu1-token:8080/.well-known/jwks.json",
         "KMS_MASTER_KEY": "${AP1_KMS_MASTER_KEY}",
         "ROTATION_KEY": "${AP1_ROTATION_KEY}",
         "INTERNAL_SECRET": "${INTERNAL_SECRET}",
-        "PEER_TOKEN_URLS": "eu1=http://eu1-token:8080",
-        "PEER_ACCOUNT_URLS": "eu1=http://eu1-account:8080",
-        "BREACH_RANGE_URL": "http://ap1-hasher:8080/range/"
+        "PEER_TOKEN_GRPC": "eu1=eu1-token:9090",
+        "PEER_ACCOUNT_GRPC": "eu1=eu1-account:9090",
+        "BREACH_RANGE_URL": "http://ap1-hasher:8080/range/",
+        "SIGNUP_PER_IP_PER_MIN": "${SIGNUP_PER_IP_PER_MIN:-600}",
+        "SIGNIN_PER_IP_PER_MIN": "${SIGNIN_PER_IP_PER_MIN:-1200}"
       },
       "networks": [
         "ap1",
@@ -1084,6 +1089,7 @@
         "ACCESS_TTL": "${ACCESS_TTL:-10m}",
         "LOG_LEVEL": "${LOG_LEVEL:-info}",
         "HASH_PEPPER": "${HASH_PEPPER}",
+        "INTERNAL_SECRET": "${INTERNAL_SECRET}",
         "HASHER_WORKERS": "${HASHER_WORKERS:-4}"
       },
       "networks": [
@@ -1120,14 +1126,16 @@
         "REDIS_RL_ADDR": "eu1-redis-rl:6379",
         "KAFKA_BROKERS": "eu1-kafka:9092",
         "REGISTRY_URL": "postgresql://root@crdb-1:26257,crdb-2:26257,crdb-3:26257/defaultdb?sslmode=disable",
-        "HASHER_URL": "http://eu1-hasher:8080",
+        "HASHER_GRPC": "eu1-hasher:9090",
         "JWKS_URLS": "http://ap1-token:8080/.well-known/jwks.json,http://eu1-token:8080/.well-known/jwks.json",
         "KMS_MASTER_KEY": "${EU1_KMS_MASTER_KEY}",
         "ROTATION_KEY": "${EU1_ROTATION_KEY}",
         "INTERNAL_SECRET": "${INTERNAL_SECRET}",
-        "PEER_TOKEN_URLS": "ap1=http://ap1-token:8080",
-        "PEER_ACCOUNT_URLS": "ap1=http://ap1-account:8080",
-        "BREACH_RANGE_URL": "http://eu1-hasher:8080/range/"
+        "PEER_TOKEN_GRPC": "ap1=ap1-token:9090",
+        "PEER_ACCOUNT_GRPC": "ap1=ap1-account:9090",
+        "BREACH_RANGE_URL": "http://eu1-hasher:8080/range/",
+        "SIGNUP_PER_IP_PER_MIN": "${SIGNUP_PER_IP_PER_MIN:-600}",
+        "SIGNIN_PER_IP_PER_MIN": "${SIGNIN_PER_IP_PER_MIN:-1200}"
       },
       "networks": [
         "eu1",
@@ -1186,14 +1194,16 @@
         "REDIS_RL_ADDR": "eu1-redis-rl:6379",
         "KAFKA_BROKERS": "eu1-kafka:9092",
         "REGISTRY_URL": "postgresql://root@crdb-1:26257,crdb-2:26257,crdb-3:26257/defaultdb?sslmode=disable",
-        "HASHER_URL": "http://eu1-hasher:8080",
+        "HASHER_GRPC": "eu1-hasher:9090",
         "JWKS_URLS": "http://ap1-token:8080/.well-known/jwks.json,http://eu1-token:8080/.well-known/jwks.json",
         "KMS_MASTER_KEY": "${EU1_KMS_MASTER_KEY}",
         "ROTATION_KEY": "${EU1_ROTATION_KEY}",
         "INTERNAL_SECRET": "${INTERNAL_SECRET}",
-        "PEER_TOKEN_URLS": "ap1=http://ap1-token:8080",
-        "PEER_ACCOUNT_URLS": "ap1=http://ap1-account:8080",
-        "BREACH_RANGE_URL": "http://eu1-hasher:8080/range/"
+        "PEER_TOKEN_GRPC": "ap1=ap1-token:9090",
+        "PEER_ACCOUNT_GRPC": "ap1=ap1-account:9090",
+        "BREACH_RANGE_URL": "http://eu1-hasher:8080/range/",
+        "SIGNUP_PER_IP_PER_MIN": "${SIGNUP_PER_IP_PER_MIN:-600}",
+        "SIGNIN_PER_IP_PER_MIN": "${SIGNIN_PER_IP_PER_MIN:-1200}"
       },
       "networks": [
         "eu1",

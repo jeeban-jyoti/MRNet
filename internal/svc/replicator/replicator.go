@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -73,17 +74,27 @@ func Run(ctx context.Context) error {
 	}
 
 	remotes := config.Map("REMOTE_KAFKA") // region -> brokers (separated by ';')
-	errc := make(chan error, len(remotes))
+	errc := make(chan error, len(remotes)+1)
+	var followers sync.WaitGroup
 	for remote, brokers := range remotes {
-		go func() { errc <- r.follow(ctx, remote, splitSemi(brokers)) }()
+		followers.Add(1)
+		go func() {
+			defer followers.Done()
+			if err := r.follow(ctx, remote, splitSemi(brokers)); err != nil {
+				errc <- err
+			}
+		}()
 	}
 
 	mux := http.NewServeMux()
 	httpx.Health(mux, nil)
-	go func() {
-		errc <- httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: mux}, "", "")
-	}()
-	return <-errc
+	go func() { errc <- httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: mux}, "", "") }()
+	err = <-errc
+	// Leave the consumer groups cleanly so a restarted replicator gets its
+	// partitions back at once instead of after the session timeout.
+	cancel()
+	followers.Wait()
+	return err
 }
 
 // follow consumes one remote region with a consumer group, committing only
@@ -94,6 +105,7 @@ func (r *Replicator) follow(ctx context.Context, remote string, brokers []string
 		kgo.ConsumeTopics(events.TopicCredentials, events.TopicRevocations),
 		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 		kgo.DisableAutoCommit(),
+		kgo.SessionTimeout(10*time.Second),
 	)
 	if err != nil {
 		return err

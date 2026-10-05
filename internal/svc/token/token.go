@@ -10,9 +10,14 @@ import (
 	"strconv"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"mrnet/api/authv1"
 	"mrnet/internal/authcore"
 	"mrnet/internal/config"
 	"mrnet/internal/events"
+	"mrnet/internal/grpcx"
 	"mrnet/internal/hashing"
 	"mrnet/internal/httpx"
 	"mrnet/internal/password"
@@ -24,6 +29,7 @@ import (
 )
 
 type Server struct {
+	authv1.UnimplementedSessionsServer
 	*authcore.Deps
 	signinPerIP int
 }
@@ -43,8 +49,15 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("POST /v1/token/renew", s.renew)
 	mux.HandleFunc("POST /v1/signout", s.signout)
 	mux.HandleFunc("GET /.well-known/jwks.json", s.jwks)
-	mux.HandleFunc("POST /internal/v1/sessions/take", httpx.RequireInternal(d.InternalSecret, s.take))
-	return httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: httpx.Logged("token", mux)}, "", "")
+
+	gs := grpcx.NewServer(d.InternalSecret)
+	authv1.RegisterSessionsServer(gs, s)
+	errc := make(chan error, 2)
+	go func() { errc <- grpcx.Serve(ctx, config.Str("GRPC_ADDR", ":9090"), gs) }()
+	go func() {
+		errc <- httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: httpx.Logged("token", mux)}, "", "")
+	}()
+	return <-errc
 }
 
 func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {
@@ -116,7 +129,7 @@ func (s *Server) signin(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusServiceUnavailable, "unavailable", "")
 		return
 	}
-	if u == nil || !res.OK || u.Status != "active" {
+	if u == nil || !res.Ok || u.Status != "active" {
 		s.Limiter.AccountFailed(ctx, acct)
 		audit.Reason = "invalid_credentials"
 		if u != nil {
@@ -167,19 +180,20 @@ func (s *Server) findUser(ctx context.Context, email string) (*users.User, error
 	if entry.HomeRegion == s.Core.Region {
 		return nil, nil
 	}
-	base, ok := s.PeerAccount[entry.HomeRegion]
+	peer, ok := s.PeerAccounts[entry.HomeRegion]
 	if !ok {
 		return nil, nil
 	}
-	var out users.User
-	st, _, err := s.Peers.PostJSON(ctx, base+"/internal/v1/users/by-email", map[string]string{"email": email}, &out)
+	ctx, cancel := context.WithTimeout(ctx, s.PeerTimeout)
+	defer cancel()
+	pu, err := peer.GetUserByEmail(ctx, &authv1.GetUserByEmailRequest{EmailNorm: email})
+	if grpcx.Code(err) == codes.NotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	if st != http.StatusOK {
-		return nil, nil
-	}
-	return &out, nil
+	return users.FromProto(pu), nil
 }
 
 type renewReq struct {
@@ -250,37 +264,18 @@ func (s *Server) renew(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, pair)
 }
 
-// TakeReq / TakeResp are the internal session-move call between regions.
-type TakeReq struct {
-	UserID     string `json:"user_id"`
-	SessionID  string `json:"session_id"`
-	SecretHash string `json:"secret_hash"`
-}
-
-type TakeResp struct {
-	Outcome     string `json:"outcome"`
-	DeviceID    string `json:"device_id,omitempty"`
-	Scope       string `json:"scope,omitempty"`
-	CV          int64  `json:"cv,omitempty"`
-	CreatedAt   int64  `json:"created_at_ms,omitempty"`
-	AbsoluteExp int64  `json:"absolute_exp_ms,omitempty"`
-}
-
 // moveHere asks the session's region to hand the session over, then stores it
 // here already rotated, so the returned refresh token names this region.
 func (s *Server) moveHere(ctx context.Context, rt tokens.Refresh, presented, nextHash string) (sessions.Outcome, *sessions.Session, error) {
-	base, ok := s.PeerToken[rt.Region]
+	peer, ok := s.PeerSessions[rt.Region]
 	if !ok {
 		return sessions.Missing, nil, nil
 	}
-	var resp TakeResp
-	st, eb, err := s.Peers.PostJSON(ctx, base+"/internal/v1/sessions/take",
-		TakeReq{UserID: rt.UserID, SessionID: rt.SessionID, SecretHash: presented}, &resp)
+	ctx, cancel := context.WithTimeout(ctx, s.PeerTimeout)
+	defer cancel()
+	resp, err := peer.TakeSession(ctx, &authv1.TakeSessionRequest{UserId: rt.UserID, SessionId: rt.SessionID, SecretHash: presented})
 	if err != nil {
 		return "", nil, err
-	}
-	if st != http.StatusOK {
-		return "", nil, errors.New("take: " + strconv.Itoa(st) + " " + eb.Error)
 	}
 	out := sessions.Outcome(resp.Outcome)
 	if out != sessions.OK {
@@ -288,8 +283,8 @@ func (s *Server) moveHere(ctx context.Context, rt tokens.Refresh, presented, nex
 	}
 	sess := sessions.Session{
 		UserID: rt.UserID, SessionID: rt.SessionID, RTHash: nextHash, RTPrevHash: presented,
-		RotatedAt: time.Now().UnixMilli(), DeviceID: resp.DeviceID, Scope: resp.Scope, CV: resp.CV,
-		CreatedAt: resp.CreatedAt, AbsoluteExp: resp.AbsoluteExp,
+		RotatedAt: time.Now().UnixMilli(), DeviceID: resp.DeviceId, Scope: resp.Scope, CV: resp.CredentialVersion,
+		CreatedAt: resp.CreatedAtMs, AbsoluteExp: resp.AbsoluteExpMs,
 	}
 	if err := s.Core.Sessions.Create(ctx, sess); err != nil {
 		return "", nil, err
@@ -298,28 +293,22 @@ func (s *Server) moveHere(ctx context.Context, rt tokens.Refresh, presented, nex
 	return sessions.OK, &sess, nil
 }
 
-func (s *Server) take(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	var req TakeReq
-	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, http.StatusBadRequest, "bad_request", "")
-		return
-	}
-	out, sess, err := s.Core.Sessions.Take(ctx, req.UserID, req.SessionID, req.SecretHash)
+// TakeSession is called by another region moving a session to itself.
+func (s *Server) TakeSession(ctx context.Context, req *authv1.TakeSessionRequest) (*authv1.TakeSessionResponse, error) {
+	out, sess, err := s.Core.Sessions.Take(ctx, req.UserId, req.SessionId, req.SecretHash)
 	if err != nil {
-		httpx.Error(w, http.StatusServiceUnavailable, "unavailable", "")
-		return
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 	if out == sessions.Reused {
-		if err := s.Core.RevokeSession(ctx, req.UserID, req.SessionID); err != nil {
+		if err := s.Core.RevokeSession(ctx, req.UserId, req.SessionId); err != nil {
 			slog.Error("revoke reused session", "err", err)
 		}
 	}
-	resp := TakeResp{Outcome: string(out)}
+	resp := &authv1.TakeSessionResponse{Outcome: string(out)}
 	if sess != nil {
-		resp.DeviceID, resp.Scope, resp.CV, resp.CreatedAt, resp.AbsoluteExp = sess.DeviceID, sess.Scope, sess.CV, sess.CreatedAt, sess.AbsoluteExp
+		resp.DeviceId, resp.Scope, resp.CredentialVersion, resp.CreatedAtMs, resp.AbsoluteExpMs = sess.DeviceID, sess.Scope, sess.CV, sess.CreatedAt, sess.AbsoluteExp
 	}
-	httpx.JSON(w, http.StatusOK, resp)
+	return resp, nil
 }
 
 type signoutReq struct {

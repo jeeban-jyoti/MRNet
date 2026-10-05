@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"mrnet/api/authv1"
 	"mrnet/internal/events"
 )
 
@@ -190,5 +191,22 @@ func RunOutbox(ctx context.Context, db *pgxpool.Pool, p *events.Producer, every 
 				onErr(err)
 			}
 		}
+	}
+}
+
+// ToProto / FromProto convert for the internal gRPC API.
+func ToProto(u *User) *authv1.User {
+	return &authv1.User{
+		UserId: u.UserID, EmailNorm: u.EmailNorm, PasswordHash: u.PasswordHash,
+		CredentialVersion: u.CredentialVersion, Status: u.Status, HomeRegion: u.HomeRegion,
+		DisplayName: u.DisplayName, PasswordChangedAtMs: u.PasswordChangedAt.UnixMilli(), CreatedAtMs: u.CreatedAt.UnixMilli(),
+	}
+}
+
+func FromProto(p *authv1.User) *User {
+	return &User{
+		UserID: p.UserId, EmailNorm: p.EmailNorm, PasswordHash: p.PasswordHash,
+		CredentialVersion: p.CredentialVersion, Status: p.Status, HomeRegion: p.HomeRegion,
+		DisplayName: p.DisplayName, PasswordChangedAt: time.UnixMilli(p.PasswordChangedAtMs).UTC(), CreatedAt: time.UnixMilli(p.CreatedAtMs).UTC(),
 	}
 }

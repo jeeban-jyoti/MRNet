@@ -1,6 +1,7 @@
-// Package hasher is the hasher pool: it only runs Argon2id. A bounded set of
-// workers takes jobs; a job that cannot start within the queue deadline gets
-// 429, so a signin flood is shed here and never slows other endpoints.
+// Package hasher is the hasher pool: it only runs Argon2id, served over gRPC.
+// A bounded set of workers takes jobs; a job that cannot start within the
+// queue deadline gets RESOURCE_EXHAUSTED (429 to the client), so a signin
+// flood is shed here and never slows other endpoints.
 package hasher
 
 import (
@@ -15,7 +16,12 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"mrnet/api/authv1"
 	"mrnet/internal/config"
+	"mrnet/internal/grpcx"
 	"mrnet/internal/hashing"
 	"mrnet/internal/httpx"
 )
@@ -24,6 +30,7 @@ import (
 var breachedList string
 
 type Server struct {
+	authv1.UnimplementedHasherServer
 	H             *hashing.Hasher
 	slots         chan struct{}
 	queueDeadline time.Duration
@@ -52,14 +59,21 @@ func Run(ctx context.Context) error {
 		}
 	}
 
+	gs := grpcx.NewServer(config.MustStr("INTERNAL_SECRET"))
+	authv1.RegisterHasherServer(gs, s)
+	errc := make(chan error, 2)
+	go func() { errc <- grpcx.Serve(ctx, config.Str("GRPC_ADDR", ":9090"), gs) }()
+
+	// HTTP is only for health probes and the breach-check stand-in.
 	mux := http.NewServeMux()
 	httpx.Health(mux, nil)
-	mux.HandleFunc("POST /hash", s.hash)
-	mux.HandleFunc("POST /verify", s.verify)
 	// Stand-in for the Have I Been Pwned range API, so breach checks work offline.
 	mux.HandleFunc("GET /range/{prefix}", s.rangeLookup)
 	slog.Info("hasher ready", "workers", workers, "queue_deadline", s.queueDeadline)
-	return httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: httpx.Logged("hasher", mux)}, "", "")
+	go func() {
+		errc <- httpx.Serve(ctx, &http.Server{Addr: config.Str("ADDR", ":8080"), Handler: httpx.Logged("hasher", mux)}, "", "")
+	}()
+	return <-errc
 }
 
 // acquire waits for a worker slot until the queue deadline.
@@ -78,36 +92,26 @@ func (s *Server) acquire(ctx context.Context) bool {
 
 func (s *Server) release() { <-s.slots }
 
-func (s *Server) hash(w http.ResponseWriter, r *http.Request) {
-	var req hashing.HashReq
-	if err := httpx.Decode(r, &req); err != nil || req.Password == "" {
-		httpx.Error(w, http.StatusBadRequest, "bad_request", "")
-		return
+var errBusy = status.Error(codes.ResourceExhausted, "hasher queue deadline passed")
+
+func (s *Server) Hash(ctx context.Context, req *authv1.HashRequest) (*authv1.HashResponse, error) {
+	if req.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
-	if !s.acquire(r.Context()) {
-		w.Header().Set("Retry-After", "1")
-		httpx.Error(w, http.StatusTooManyRequests, "busy", "")
-		return
+	if !s.acquire(ctx) {
+		return nil, errBusy
 	}
 	defer s.release()
 	h, err := s.H.Hash(req.Password)
 	if err != nil {
-		httpx.Error(w, http.StatusInternalServerError, "internal", "")
-		return
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	httpx.JSON(w, http.StatusOK, hashing.HashResp{Hash: h})
+	return &authv1.HashResponse{Hash: h}, nil
 }
 
-func (s *Server) verify(w http.ResponseWriter, r *http.Request) {
-	var req hashing.VerifyReq
-	if err := httpx.Decode(r, &req); err != nil {
-		httpx.Error(w, http.StatusBadRequest, "bad_request", "")
-		return
-	}
-	if !s.acquire(r.Context()) {
-		w.Header().Set("Retry-After", "1")
-		httpx.Error(w, http.StatusTooManyRequests, "busy", "")
-		return
+func (s *Server) Verify(ctx context.Context, req *authv1.VerifyRequest) (*authv1.VerifyResponse, error) {
+	if !s.acquire(ctx) {
+		return nil, errBusy
 	}
 	defer s.release()
 	hash, dummy := req.Hash, false
@@ -116,10 +120,9 @@ func (s *Server) verify(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, rehash, err := s.H.Verify(req.Password, hash)
 	if err != nil {
-		httpx.Error(w, http.StatusUnprocessableEntity, "bad_hash", "")
-		return
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	httpx.JSON(w, http.StatusOK, hashing.VerifyResp{OK: ok && !dummy, NeedsRehash: rehash})
+	return &authv1.VerifyResponse{Ok: ok && !dummy, NeedsRehash: rehash}, nil
 }
 
 func (s *Server) rangeLookup(w http.ResponseWriter, r *http.Request) {

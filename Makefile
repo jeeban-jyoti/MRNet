@@ -1,7 +1,7 @@
 # MRNet auth service: two regions plus the global registry, on this machine.
 COMPOSE := docker compose -f deploy/compose.yaml
 
-.PHONY: up down reset build compose secrets test e2e bench logs ps
+.PHONY: up down reset build compose secrets proto test e2e bench logs ps
 
 up: secrets compose build
 	$(COMPOSE) up -d --wait
@@ -30,6 +30,9 @@ down:
 # Removes every container and volume: all users and sessions are deleted.
 reset:
 	$(COMPOSE) down -v
+
+proto:
+	protoc --go_out=. --go_opt=module=mrnet --go-grpc_out=. --go-grpc_opt=module=mrnet api/authv1/internal.proto
 
 test:
 	go test ./internal/...

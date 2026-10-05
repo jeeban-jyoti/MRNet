@@ -67,14 +67,18 @@ def region_services(r, port):
     }
     auth = {
         **common, **stores,
-        "HASHER_URL": f"http://{r}-hasher:8080",
+        "HASHER_GRPC": f"{r}-hasher:9090",
         "JWKS_URLS": jwks,
         "KMS_MASTER_KEY": f"${{{r.upper()}_KMS_MASTER_KEY}}",
         "ROTATION_KEY": f"${{{r.upper()}_ROTATION_KEY}}",
         "INTERNAL_SECRET": "${INTERNAL_SECRET}",
-        "PEER_TOKEN_URLS": ",".join(f"{o}=http://{o}-token:8080" for o in others),
-        "PEER_ACCOUNT_URLS": ",".join(f"{o}=http://{o}-account:8080" for o in others),
+        # Service-to-service calls are gRPC on :9090; :8080 is public HTTP and health.
+        "PEER_TOKEN_GRPC": ",".join(f"{o}={o}-token:9090" for o in others),
+        "PEER_ACCOUNT_GRPC": ",".join(f"{o}={o}-account:9090" for o in others),
         "BREACH_RANGE_URL": f"http://{r}-hasher:8080/range/",
+        # Every local client shares one IP, so the per-IP limits are raised here.
+        "SIGNUP_PER_IP_PER_MIN": "${SIGNUP_PER_IP_PER_MIN:-600}",
+        "SIGNIN_PER_IP_PER_MIN": "${SIGNIN_PER_IP_PER_MIN:-1200}",
     }
     ready = {"condition": "service_healthy"}
     done = {"condition": "service_completed_successfully"}
@@ -173,7 +177,7 @@ def region_services(r, port):
         "networks": net,
     }
     s[f"{r}-hasher"] = go_service("hasher", r, {
-        **common, "HASH_PEPPER": "${HASH_PEPPER}", "HASHER_WORKERS": "${HASHER_WORKERS:-4}",
+        **common, "HASH_PEPPER": "${HASH_PEPPER}", "INTERNAL_SECRET": "${INTERNAL_SECRET}", "HASHER_WORKERS": "${HASHER_WORKERS:-4}",
     }, net, {})
     s[f"{r}-token"] = go_service("token", r, auth, net_wan, {**store_deps, f"{r}-hasher": ready})
     s[f"{r}-account"] = go_service("account", r, auth, net_wan, {**store_deps, f"{r}-hasher": ready})
