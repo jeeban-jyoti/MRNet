@@ -193,9 +193,11 @@
       "volumes": [
         "ap1-redis-1:/data"
       ],
-      "networks": [
-        "ap1"
-      ]
+      "networks": {
+        "ap1": {
+          "ipv4_address": "10.231.1.11"
+        }
+      }
     },
     "ap1-redis-2": {
       "image": "redis:7.4",
@@ -220,9 +222,11 @@
       "volumes": [
         "ap1-redis-2:/data"
       ],
-      "networks": [
-        "ap1"
-      ]
+      "networks": {
+        "ap1": {
+          "ipv4_address": "10.231.1.12"
+        }
+      }
     },
     "ap1-redis-3": {
       "image": "redis:7.4",
@@ -247,9 +251,11 @@
       "volumes": [
         "ap1-redis-3:/data"
       ],
-      "networks": [
-        "ap1"
-      ]
+      "networks": {
+        "ap1": {
+          "ipv4_address": "10.231.1.13"
+        }
+      }
     },
     "ap1-redis-4": {
       "image": "redis:7.4",
@@ -274,9 +280,11 @@
       "volumes": [
         "ap1-redis-4:/data"
       ],
-      "networks": [
-        "ap1"
-      ]
+      "networks": {
+        "ap1": {
+          "ipv4_address": "10.231.1.14"
+        }
+      }
     },
     "ap1-redis-5": {
       "image": "redis:7.4",
@@ -301,9 +309,11 @@
       "volumes": [
         "ap1-redis-5:/data"
       ],
-      "networks": [
-        "ap1"
-      ]
+      "networks": {
+        "ap1": {
+          "ipv4_address": "10.231.1.15"
+        }
+      }
     },
     "ap1-redis-6": {
       "image": "redis:7.4",
@@ -328,9 +338,11 @@
       "volumes": [
         "ap1-redis-6:/data"
       ],
-      "networks": [
-        "ap1"
-      ]
+      "networks": {
+        "ap1": {
+          "ipv4_address": "10.231.1.16"
+        }
+      }
     },
     "ap1-redis-cluster-init": {
       "image": "redis:7.4",
@@ -827,9 +839,11 @@
       "volumes": [
         "eu1-redis-1:/data"
       ],
-      "networks": [
-        "eu1"
-      ]
+      "networks": {
+        "eu1": {
+          "ipv4_address": "10.231.2.11"
+        }
+      }
     },
     "eu1-redis-2": {
       "image": "redis:7.4",
@@ -854,9 +868,11 @@
       "volumes": [
         "eu1-redis-2:/data"
       ],
-      "networks": [
-        "eu1"
-      ]
+      "networks": {
+        "eu1": {
+          "ipv4_address": "10.231.2.12"
+        }
+      }
     },
     "eu1-redis-3": {
       "image": "redis:7.4",
@@ -881,9 +897,11 @@
       "volumes": [
         "eu1-redis-3:/data"
       ],
-      "networks": [
-        "eu1"
-      ]
+      "networks": {
+        "eu1": {
+          "ipv4_address": "10.231.2.13"
+        }
+      }
     },
     "eu1-redis-4": {
       "image": "redis:7.4",
@@ -908,9 +926,11 @@
       "volumes": [
         "eu1-redis-4:/data"
       ],
-      "networks": [
-        "eu1"
-      ]
+      "networks": {
+        "eu1": {
+          "ipv4_address": "10.231.2.14"
+        }
+      }
     },
     "eu1-redis-5": {
       "image": "redis:7.4",
@@ -935,9 +955,11 @@
       "volumes": [
         "eu1-redis-5:/data"
       ],
-      "networks": [
-        "eu1"
-      ]
+      "networks": {
+        "eu1": {
+          "ipv4_address": "10.231.2.15"
+        }
+      }
     },
     "eu1-redis-6": {
       "image": "redis:7.4",
@@ -962,9 +984,11 @@
       "volumes": [
         "eu1-redis-6:/data"
       ],
-      "networks": [
-        "eu1"
-      ]
+      "networks": {
+        "eu1": {
+          "ipv4_address": "10.231.2.16"
+        }
+      }
     },
     "eu1-redis-cluster-init": {
       "image": "redis:7.4",
@@ -1372,8 +1396,26 @@
     }
   },
   "networks": {
-    "ap1": {},
-    "eu1": {},
+    "ap1": {
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.231.1.0/24",
+            "ip_range": "10.231.1.128/25"
+          }
+        ]
+      }
+    },
+    "eu1": {
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.231.2.0/24",
+            "ip_range": "10.231.2.128/25"
+          }
+        ]
+      }
+    },
     "wan": {}
   },
   "volumes": {

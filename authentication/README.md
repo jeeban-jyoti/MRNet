@@ -126,6 +126,13 @@ needed on these numbers. The hasher is slower than assumed; benchmark on the
 target servers before sizing the pool, and compare against a Rust Argon2id
 if it stays above 15 ms.
 
+## Networks
+
+Each region's Docker network uses a fixed subnet (`10.231.1.0/24` for ap1,
+`10.231.2.0/24` for eu1) so the Redis nodes keep the same addresses across
+restarts; Redis Cluster nodes find each other by IP. If those ranges clash
+with a VPN on your machine, change `subnet()` in `deploy/gen_compose.py`.
+
 ## Changing the topology
 
 `deploy/compose.yaml` is generated. Edit `deploy/gen_compose.py` (for example

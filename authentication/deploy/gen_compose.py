@@ -19,6 +19,13 @@ REGIONS = {
 REDIS_NODES = 6  # 3 primaries + 3 replicas per region
 CRDB_NODES = 3
 
+
+def subnet(r):
+    """Fixed /24 for a region's network. Redis cluster nodes gossip by IP and
+    keep peers' IPs in nodes.conf, so they need addresses that survive a
+    restart; everything else is assigned from the upper half."""
+    return f"10.231.{list(REGIONS).index(r) + 1}"
+
 IMAGE = "mrnet-auth:dev"
 REGISTRY_URL = "postgresql://root@" + ",".join(f"crdb-{i}:26257" for i in range(1, CRDB_NODES + 1)) + "/defaultdb?sslmode=disable"
 
@@ -117,7 +124,7 @@ def region_services(r, port):
         "healthcheck": {"test": ["CMD-SHELL", "pg_isready -U mrnet -d mrnet"], "interval": "2s", "retries": 90},
         "networks": net,
     }
-    for n in redis_nodes:
+    for i, n in enumerate(redis_nodes, 1):
         s[n] = {
             "image": "redis:7.4",
             "restart": "unless-stopped",
@@ -125,7 +132,7 @@ def region_services(r, port):
                         "--cluster-node-timeout", "5000", "--appendonly", "yes", "--appendfsync", "everysec",
                         "--cluster-announce-hostname", n, "--cluster-preferred-endpoint-type", "hostname"],
             "volumes": [f"{n}:/data"],
-            "networks": net,
+            "networks": {r: {"ipv4_address": f"{subnet(r)}.{10 + i}"}},
         }
     s[f"{r}-redis-cluster-init"] = {
         "image": "redis:7.4",
@@ -246,7 +253,11 @@ def main():
     doc = {
         "name": "mrnet-auth",
         "services": services,
-        "networks": {**{r: {} for r in REGIONS}, "wan": {}},
+        "networks": {
+            **{r: {"ipam": {"config": [{"subnet": f"{subnet(r)}.0/24", "ip_range": f"{subnet(r)}.128/25"}]}}
+               for r in REGIONS},
+            "wan": {},
+        },
         "volumes": {v: {} for v in volumes},
     }
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "compose.yaml")
